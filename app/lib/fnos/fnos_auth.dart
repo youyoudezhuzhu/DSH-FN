@@ -71,6 +71,33 @@ Future<void> clearFnosCookies() async {
   }
 }
 
+/// 飞牛账号密码：只用于「自动登录」（会话过期后无需再手动输一次）。
+///
+/// 只进安全存储（Android Keystore），不写日志、不进 prefs、不随配置导出；
+/// [toString] 只显示账号名，不回显密码。
+class FnosCredentials {
+  const FnosCredentials({required this.username, required this.password});
+
+  factory FnosCredentials.fromJson(Map<String, Object?> json) {
+    final username = json['username'];
+    final password = json['password'];
+    if (username is! String || username.isEmpty || password is! String || password.isEmpty) {
+      throw const FormatException('username or password missing');
+    }
+    return FnosCredentials(username: username, password: password);
+  }
+
+  final String username;
+  final String password;
+
+  bool get isEmpty => username.isEmpty || password.isEmpty;
+
+  Map<String, Object?> toJson() => {'username': username, 'password': password};
+
+  @override
+  String toString() => 'FnosCredentials($username, password hidden)';
+}
+
 /// 一次飞牛登录会话的持久化形态。
 ///
 /// 飞牛会话 Cookie 的有效期由服务端决定，客户端只保守地 25 天后重登。

@@ -5,6 +5,7 @@
 library;
 
 import 'dart:async';
+import 'dart:convert';
 
 import 'package:flutter/material.dart';
 import 'package:webview_flutter/webview_flutter.dart';
@@ -261,6 +262,194 @@ class _FnosLoginPageState extends State<FnosLoginPage> {
             child: Text(error, style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.onErrorContainer)),
           ),
           TextButton(onPressed: _retry, child: const Text('重试')),
+        ],
+      ),
+    );
+  }
+}
+
+/// 自动登录：用保存在本机安全存储里的飞牛账号密码，在一个隐藏 WebView 里
+/// 自动填表登录，刷新会话 Cookie。
+///
+/// - 打开 [target.origin]（fnOS 登录页），每 2 秒尝试一次自动填表（页面刚
+///   加载时输入框可能还没渲染），最多 3 次；
+/// - 每秒读 Cookie 并用 [probeFnosDsh] 验证，通过即回调；
+/// - 45 秒内没成功（密码改了、需要验证码、页面结构变化）回调失败，由调用方
+///   退回手动登录页；密码不会出现在任何日志或界面里。
+class FnosAutoLoginPage extends StatefulWidget {
+  const FnosAutoLoginPage({
+    super.key,
+    required this.target,
+    required this.credentials,
+    required this.onFinished,
+  });
+
+  final FnConnectTarget target;
+  final FnosCredentials credentials;
+
+  /// 成功给 Cookie 串，失败给中文原因（都不含密码）。
+  final void Function(String? cookieHeader, String? error) onFinished;
+
+  @override
+  State<FnosAutoLoginPage> createState() => _FnosAutoLoginPageState();
+}
+
+const _autoLoginTimeout = Duration(seconds: 45);
+const _autoFillRetry = Duration(seconds: 2);
+
+class _FnosAutoLoginPageState extends State<FnosAutoLoginPage> {
+  WebViewController? _controller;
+  Timer? _poll;
+  Timer? _deadline;
+  Timer? _fillTimer;
+  int _fills = 0;
+  int _submits = 0;
+  bool _finished = false;
+  bool _probing = false;
+  String _status = '正在自动登录飞牛…';
+
+  @override
+  void initState() {
+    super.initState();
+    unawaited(_open());
+    _poll = Timer.periodic(_cookiePollInterval, (_) => unawaited(_checkCookie()));
+    _deadline = Timer(_autoLoginTimeout, () => _finish(null, '自动登录超时：请在登录页手动登录一次'));
+  }
+
+  @override
+  void dispose() {
+    _poll?.cancel();
+    _deadline?.cancel();
+    _fillTimer?.cancel();
+    super.dispose();
+  }
+
+  void _finish(String? cookie, String? error) {
+    if (_finished) return;
+    _finished = true;
+    _poll?.cancel();
+    _deadline?.cancel();
+    _fillTimer?.cancel();
+    if (mounted) widget.onFinished(cookie, error);
+  }
+
+  Future<void> _open() async {
+    try {
+      final controller = WebViewController();
+      if (mounted) setState(() => _controller = controller);
+      await controller.setJavaScriptMode(JavaScriptMode.unrestricted);
+      await controller.setNavigationDelegate(
+        NavigationDelegate(
+          onPageFinished: (_) {
+            if (!mounted || _finished) return;
+            unawaited(_fillForm());
+          },
+        ),
+      );
+      await controller.loadRequest(widget.target.origin);
+      _fillTimer = Timer.periodic(_autoFillRetry, (_) => unawaited(_fillForm()));
+    } catch (_) {
+      _finish(null, '无法打开飞牛登录页（WebView 初始化失败）');
+    }
+  }
+
+  /// 把账号密码填进登录表单并提交。只在表单渲染出来后执行。
+  Future<void> _fillForm() async {
+    final controller = _controller;
+    if (controller == null || _finished || _submits >= 3) return;
+    final user = jsonEncode(widget.credentials.username);
+    final pass = jsonEncode(widget.credentials.password);
+    final js = '''
+(function() {
+  const user = $user, pass = $pass;
+  const set = (el, v) => {
+    const setter = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value').set;
+    setter.call(el, v);
+    el.dispatchEvent(new Event('input', { bubbles: true }));
+    el.dispatchEvent(new Event('change', { bubbles: true }));
+  };
+  const password = document.querySelector('input[type=password]');
+  const visible = [...document.querySelectorAll('input')].filter((el) => {
+    const type = (el.getAttribute('type') || 'text').toLowerCase();
+    return (type === 'text' || type === 'email' || type === 'tel') && el.offsetParent !== null;
+  });
+  if (!password || visible.length === 0) return 'no-form';
+  set(visible[0], user);
+  set(password, pass);
+  const button = [...document.querySelectorAll('button, input[type=submit]')].find((el) =>
+    /登录|登 录|sign\\s*in|log\\s*in/i.test((el.textContent || el.value || '').trim()));
+  if (button) { button.click(); return 'submitted'; }
+  const form = password.closest('form');
+  if (form) { if (form.requestSubmit) form.requestSubmit(); else form.submit(); return 'submitted'; }
+  return 'no-button';
+})();
+''';
+    try {
+      final result = await controller.runJavaScriptReturningResult(js);
+      final text = '$result';
+      if (text.contains('submitted')) {
+        _submits++;
+        _status = '正在登录飞牛…';
+      } else if (text.contains('no-form')) {
+        _fills++;
+      }
+    } catch (_) {
+      // 页面还没就绪：下一次重试。
+    }
+  }
+
+  Future<void> _checkCookie() async {
+    if (_finished || _probing) return;
+    final cookie = await readFnosCookies(widget.target.origin.toString());
+    if (cookie == null || cookie.isEmpty) return;
+    _probing = true;
+    try {
+      final probe = await probeFnosDsh(target: widget.target, cookieHeader: cookie);
+      if (!mounted || _finished) return;
+      if (probe.authenticated) {
+        await writeFnosCookies(widget.target.origin.toString(), cookie);
+        _finish(cookie, null);
+      } else {
+        _status = probe.detail ?? '自动登录没有通过网关验证';
+      }
+    } finally {
+      _probing = false;
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final controller = _controller;
+    final theme = Theme.of(context);
+    return Scaffold(
+      body: Stack(
+        children: [
+          // WebView 必须在树上才会真正加载页面；放在全屏底层、被下面的不透明
+          // 遮罩盖住，用户只看到进度提示。
+          if (controller != null)
+            Positioned.fill(
+              child: IgnorePointer(child: WebViewWidget(controller: controller)),
+            ),
+          Positioned.fill(
+            child: ColoredBox(
+              color: theme.colorScheme.surface,
+              child: Center(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const SizedBox(width: 28, height: 28, child: CircularProgressIndicator(strokeWidth: 2.4)),
+                    const SizedBox(height: 16),
+                    Text(_status),
+                    const SizedBox(height: 8),
+                    Text(
+                      '已保存飞牛账号，正在自动重新登录；不需要的话可在设置里关闭',
+                      style: theme.textTheme.bodySmall,
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
         ],
       ),
     );

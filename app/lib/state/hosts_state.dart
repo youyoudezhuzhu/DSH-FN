@@ -126,7 +126,7 @@ class FnosHostConfig {
 }
 
 class FnosHostState {
-  const FnosHostState({this.config, this.session, this.loaded = false});
+  const FnosHostState({this.config, this.session, this.credentials, this.loaded = false});
 
   /// 还没配置主机时为 null（首次启动）。
   final FnosHostConfig? config;
@@ -134,24 +134,37 @@ class FnosHostState {
   /// 登录过的飞牛会话；为空表示需要（重新）登录。
   final FnosSession? session;
 
+  /// 保存的飞牛账号密码，用于会话过期后自动登录；没有则不自动登录。
+  final FnosCredentials? credentials;
+
+  bool get autoLogin => credentials != null;
+
   /// 本地配置读完之前为 false：启动画面期间不要闪一下"未配置"。
   final bool loaded;
 
   bool get configured => config != null;
   bool get signedIn => session != null;
 
-  FnosHostState copyWith({FnosHostConfig? config, FnosSession? session, bool? loaded, bool clearSession = false}) =>
-      FnosHostState(
-        config: config ?? this.config,
-        session: clearSession ? null : (session ?? this.session),
-        loaded: loaded ?? this.loaded,
-      );
+  FnosHostState copyWith({
+    FnosHostConfig? config,
+    FnosSession? session,
+    FnosCredentials? credentials,
+    bool? loaded,
+    bool clearSession = false,
+    bool clearCredentials = false,
+  }) => FnosHostState(
+    config: config ?? this.config,
+    session: clearSession ? null : (session ?? this.session),
+    credentials: clearCredentials ? null : (credentials ?? this.credentials),
+    loaded: loaded ?? this.loaded,
+  );
 }
 
 /// 飞牛主机的配置与会话：配置进 SharedPreferences，会话 Cookie 进安全存储。
 class FnosHostController extends Notifier<FnosHostState> {
   static const prefsKey = 'fnos_host_v1';
   static const _sessionKey = 'fnos_session';
+  static const _credentialsKey = 'fnos_credentials';
   late Future<void> _loaded;
 
   SecretStore get _secrets => ref.read(secretStoreProvider);
@@ -187,8 +200,18 @@ class FnosHostController extends Notifier<FnosHostState> {
     } catch (_) {
       // 安全存储不可用或坏数据：当作未登录。
     }
+    FnosCredentials? credentials;
+    try {
+      final raw = await _secrets.read(_credentialsKey);
+      if (raw != null && raw.isNotEmpty) {
+        final decoded = jsonDecode(raw);
+        if (decoded is Map<String, Object?>) credentials = FnosCredentials.fromJson(decoded);
+      }
+    } catch (_) {
+      // 安全存储不可用或坏数据：不自动登录。
+    }
     if (!ref.mounted) return;
-    state = FnosHostState(config: config, session: session, loaded: true);
+    state = FnosHostState(config: config, session: session, credentials: credentials, loaded: true);
   }
 
   /// 保存主机（fnconnect ID）。换到另一台 NAS 时旧会话作废。
@@ -222,6 +245,21 @@ class FnosHostController extends Notifier<FnosHostState> {
     return target;
   }
 
+  /// 保存/清除飞牛账号密码（自动登录用）。密码只进安全存储。
+  Future<void> saveCredentials(FnosCredentials? credentials) async {
+    await _loaded;
+    state = state.copyWith(credentials: credentials, clearCredentials: credentials == null, loaded: true);
+    try {
+      if (credentials == null || credentials.isEmpty) {
+        await _secrets.delete(_credentialsKey);
+      } else {
+        await _secrets.write(_credentialsKey, jsonEncode(credentials.toJson()));
+      }
+    } catch (_) {
+      // 写不进安全存储：本次运行仍可用，下次启动要重新设置。
+    }
+  }
+
   /// 记住登录得到的飞牛会话 Cookie。
   Future<void> saveSession(String cookieHeader) async {
     await _loaded;
@@ -252,6 +290,7 @@ class FnosHostController extends Notifier<FnosHostState> {
     state = const FnosHostState(loaded: true);
     try {
       await _secrets.delete(_sessionKey);
+      await _secrets.delete(_credentialsKey);
       final prefs = await SharedPreferences.getInstance();
       await prefs.remove(prefsKey);
     } catch (_) {}

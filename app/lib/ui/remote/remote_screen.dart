@@ -17,6 +17,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../fnos/fnconnect.dart';
 import '../../fnos/fnos_auth.dart';
+import '../../fnos/fnos_auth.dart';
 import '../../fnos/fnos_webview.dart';
 import '../../state/connection_state.dart';
 import '../../state/hosts_state.dart';
@@ -221,6 +222,57 @@ class _RemoteScreenState extends ConsumerState<RemoteScreen> {
       setState(() => _busy = false);
       showBriefNotice(context, '退出登录失败：${describeHostError(error)}');
     }
+  }
+
+  /// 自动登录：保存/清除飞牛账号密码（只进本机安全存储）。
+  Future<void> _editAutoLogin() async {
+    final config = ref.read(fnosHostProvider).credentials;
+    final username = TextEditingController(text: config?.username ?? '');
+    final password = TextEditingController(text: config?.password ?? '');
+    final save = await showAppDialog<bool>(
+      context: context,
+      builder: (dialog) => AlertDialog(
+        title: const Text('自动登录'),
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              const Text('保存飞牛账号密码到本机安全存储；飞牛登录过期后自动重新登录，密码不上传、不写日志。'),
+              const SizedBox(height: 12),
+              TextField(
+                controller: username,
+                autocorrect: false,
+                enableSuggestions: false,
+                decoration: const InputDecoration(labelText: '飞牛账号', hintText: '登录 fnOS 的用户名或手机号'),
+              ),
+              const SizedBox(height: 8),
+              TextField(
+                controller: password,
+                obscureText: true,
+                autocorrect: false,
+                enableSuggestions: false,
+                decoration: const InputDecoration(labelText: '飞牛密码'),
+              ),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialog).pop(false),
+            child: const Text('关闭自动登录'),
+          ),
+          TextButton(onPressed: () => Navigator.of(dialog).pop(), child: const Text('取消')),
+          FilledButton(onPressed: () => Navigator.of(dialog).pop(true), child: const Text('保存')),
+        ],
+      ),
+    );
+    if (save == null || !mounted) return;
+    await ref.read(fnosHostProvider.notifier).saveCredentials(
+      save ? FnosCredentials(username: username.text.trim(), password: password.text) : null,
+    );
+    if (!mounted) return;
+    showBriefNotice(context, save ? '已开启自动登录' : '已关闭自动登录');
   }
 
   /// 修改 DSH 网关路径（同一台 NAS，保留飞牛登录）。
@@ -558,6 +610,14 @@ class _RemoteScreenState extends ConsumerState<RemoteScreen> {
             title: '重新登录飞牛',
             subtitle: '飞牛登录过期或换了飞牛账号时使用',
             onTap: _busy ? null : () => unawaited(_relogin()),
+          ),
+          SettingsTile(
+            icon: AppIcons.lock,
+            tinted: false,
+            title: '自动登录',
+            subtitle: '保存飞牛账号密码到本机；登录过期后自动重新登录，不用手动输',
+            value: Text(ref.watch(fnosHostProvider).autoLogin ? '已开启' : '未开启'),
+            onTap: _busy ? null : () => unawaited(_editAutoLogin()),
           ),
           SettingsTile(
             icon: AppIcons.configure,

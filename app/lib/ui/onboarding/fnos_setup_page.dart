@@ -17,7 +17,10 @@ import '../shell/brand_mark.dart';
 import '../theme/theme.dart';
 
 class FnosSetupPage extends ConsumerStatefulWidget {
-  const FnosSetupPage({super.key});
+  const FnosSetupPage({super.key, this.initialError});
+
+  /// 自动登录失败时的原因，显示在表单上方。
+  final String? initialError;
 
   @override
   ConsumerState<FnosSetupPage> createState() => _FnosSetupPageState();
@@ -26,7 +29,10 @@ class FnosSetupPage extends ConsumerStatefulWidget {
 class _FnosSetupPageState extends ConsumerState<FnosSetupPage> {
   late final TextEditingController _input;
   late final TextEditingController _gateway;
+  late final TextEditingController _username;
+  late final TextEditingController _password;
   bool _advanced = false;
+  bool _autoLogin = false;
   bool _busy = false;
   String? _error;
 
@@ -38,12 +44,18 @@ class _FnosSetupPageState extends ConsumerState<FnosSetupPage> {
     final customPath = config?.gatewayPath;
     _gateway = TextEditingController(text: customPath ?? '');
     _advanced = customPath != null;
+    final credentials = ref.read(fnosHostProvider).credentials;
+    _username = TextEditingController(text: credentials?.username ?? '');
+    _password = TextEditingController(text: credentials?.password ?? '');
+    _autoLogin = credentials != null;
   }
 
   @override
   void dispose() {
     _input.dispose();
     _gateway.dispose();
+    _username.dispose();
+    _password.dispose();
     super.dispose();
   }
 
@@ -174,7 +186,43 @@ class _FnosSetupPageState extends ConsumerState<FnosSetupPage> {
                         ),
                       ],
                     ),
-                    if (_error case final error?) ...[
+                                    SwitchListTile(
+                      contentPadding: EdgeInsets.zero,
+                      value: _autoLogin,
+                      onChanged: _busy ? null : (value) => setState(() => _autoLogin = value),
+                      title: Text('自动登录（推荐）', style: theme.textTheme.bodyMedium),
+                      subtitle: Text(
+                        '保存飞牛账号密码到本机安全存储：飞牛登录过期后自动重新登录，不用每次手动输',
+                        style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.outline),
+                      ),
+                    ),
+                    if (_autoLogin) ...[
+                      const SizedBox(height: 4),
+                      TextField(
+                        controller: _username,
+                        enabled: !_busy,
+                        autocorrect: false,
+                        enableSuggestions: false,
+                        keyboardType: TextInputType.text,
+                        decoration: const InputDecoration(
+                          labelText: '飞牛账号',
+                          hintText: '登录 fnOS 用的用户名或手机号',
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      TextField(
+                        controller: _password,
+                        enabled: !_busy,
+                        obscureText: true,
+                        autocorrect: false,
+                        enableSuggestions: false,
+                        decoration: const InputDecoration(
+                          labelText: '飞牛密码',
+                          helperText: '只保存在本机 Keystore，不上传、不写日志',
+                        ),
+                      ),
+                    ],
+                    if ((_error ?? widget.initialError) case final error?) ...[
                       const SizedBox(height: 12),
                       Text(error, style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.error)),
                     ],

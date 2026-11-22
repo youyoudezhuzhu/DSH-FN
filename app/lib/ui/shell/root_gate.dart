@@ -14,6 +14,7 @@ import '../../launch/launch_state.dart';
 import '../../launch/startup_trace.dart';
 import '../../state/connection_state.dart';
 import '../../state/hosts_state.dart';
+import '../../fnos/fnos_webview.dart';
 import '../onboarding/fnos_setup_page.dart';
 import '../theme/theme.dart';
 import '../web/mode_home.dart';
@@ -33,6 +34,9 @@ class RootGate extends ConsumerStatefulWidget {
 
 class _RootGateState extends ConsumerState<RootGate> {
   bool _launchReady = false;
+
+  /// 本启动流程最多自动登录一次；失败就退回手动登录页，避免死循环。
+  bool _autoLoginTried = false;
 
   /// 首次连接迟迟没有结果（网关掉线、WebSocket 卡住）时，别让启动画面一直转。
   static const _slowConnect = Duration(seconds: 20);
@@ -54,6 +58,18 @@ class _RootGateState extends ConsumerState<RootGate> {
         _slowTimer = null;
       });
     });
+  }
+
+  String? _setupError;
+
+  Future<void> _onAutoLogin(FnosHostState host, String? cookie, String? error) async {
+    _autoLoginTried = true;
+    if (cookie != null && cookie.isNotEmpty) {
+      await ref.read(fnosHostProvider.notifier).saveSession(cookie);
+      return;
+    }
+    _setupError = error ?? '自动登录失败，请手动登录一次';
+    if (mounted) setState(() {});
   }
 
   @override
@@ -83,9 +99,16 @@ class _RootGateState extends ConsumerState<RootGate> {
     var key = 'splash';
     if (!host.loaded) {
       child = const _Splash();
+    } else if (host.configured && !host.signedIn && host.autoLogin && !_autoLoginTried) {
+      key = 'autologin';
+      child = FnosAutoLoginPage(
+        target: host.config!.target,
+        credentials: host.credentials!,
+        onFinished: (cookie, error) => unawaited(_onAutoLogin(host, cookie, error)),
+      );
     } else if (!host.configured || !host.signedIn) {
       key = 'setup';
-      child = const FnosSetupPage();
+      child = FnosSetupPage(initialError: _setupError);
     } else if (connection.isLoading && _slow) {
       key = 'offline';
       child = _ConnectFailed(
@@ -109,6 +132,9 @@ class _RootGateState extends ConsumerState<RootGate> {
       child = widget.home ?? const ModeHome();
     }
 
+    // 连上主界面 = 这次会话真的恢复了：下次再过期可以重新自动登录，
+    // 同时也避免「自动登录成功但连接仍失败」时反复重试。
+    if (key == 'home') _autoLoginTried = false;
     _watchSlowStartup(key == 'splash' && host.configured && host.signedIn);
     if (key != 'splash') _markLaunchReady();
     return AnimatedSwitcher(

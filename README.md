@@ -87,4 +87,5 @@ AGPL-3.0，见 [LICENSE](LICENSE)。上游项目与第三方组件许可见 [THI
 
 - 应用内更新只查本仓库的 GitHub Releases（`youyoudezhuzhu/DSH-FN`），不会提示上游 dsh-go 的版本，也不走上游镜像/内测通道；APK 资产名 `DSH-FN-<version>-<arm64|x64>.apk`。
 - 仓库与源码中不包含任何真实 fnconnect ID；示例统一写作 `mynas`。你在 App 里输入的 ID 只保存在本机（Secure Storage / SharedPreferences）。
+- 可开启「自动登录」：飞牛账号密码只保存在本机 Keystore（安全存储，不上传、不写日志）；飞牛登录过期后 App 自动重新登录，不需要手动再输。
 - 原版"手机操控"（让 agent 通过无障碍/Shizuku 操作手机）只在本机引擎下可用，本 fork 没有本机引擎，相关 Dart/Kotlin/引导/测试已全部删除；Shizuku 仅保留用于 APK 自更新安装。
