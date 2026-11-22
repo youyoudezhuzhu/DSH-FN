@@ -302,7 +302,6 @@ class _FnosAutoLoginPageState extends State<FnosAutoLoginPage> {
   Timer? _poll;
   Timer? _deadline;
   Timer? _fillTimer;
-  int _fills = 0;
   int _submits = 0;
   bool _finished = false;
   bool _probing = false;
@@ -390,8 +389,6 @@ class _FnosAutoLoginPageState extends State<FnosAutoLoginPage> {
       if (text.contains('submitted')) {
         _submits++;
         _status = '正在登录飞牛…';
-      } else if (text.contains('no-form')) {
-        _fills++;
       }
     } catch (_) {
       // 页面还没就绪：下一次重试。

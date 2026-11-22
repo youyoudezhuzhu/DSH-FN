@@ -17,7 +17,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../fnos/fnconnect.dart';
 import '../../fnos/fnos_auth.dart';
-import '../../fnos/fnos_auth.dart';
 import '../../fnos/fnos_webview.dart';
 import '../../state/connection_state.dart';
 import '../../state/hosts_state.dart';
