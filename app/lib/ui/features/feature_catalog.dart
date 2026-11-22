@@ -13,7 +13,6 @@ import '../../l10n/l10n.dart';
 import '../../plugins/native/native_icons.dart';
 import '../../plugins/native/native_state.dart';
 import '../../plugins/seams/seams.dart';
-import '../../state/android_features.dart';
 import '../../state/plugins_state.dart';
 import '../common/feature_tile.dart';
 import '../agents/team_page.dart';
@@ -22,8 +21,6 @@ import '../community/community_page.dart';
 import '../cordis/cordis_page.dart';
 import '../files/files_page.dart';
 import '../forum/forum_home_page.dart';
-import '../phone/phone_control_screen.dart';
-import '../phone/system_actions_page.dart';
 import '../plugins/plugin_detail_sheet.dart';
 import '../plugins/plugins_screen.dart';
 import '../plugins/seats/plugin_seat_page.dart';
@@ -401,14 +398,6 @@ final featureSections = <FeatureSection>[
       native: (id) => PermissionPage(sessionId: id),
     ),
     FeatureItem.localized(
-      id: 'phone',
-      title: (l10n) => l10n.catalogPhoneControl,
-      summary: (l10n) => l10n.catalogPhoneControlSummary,
-      icon: AppIcons.phoneControl,
-      tile: FeatureKind.phone,
-      native: (_) => const PhoneControlScreen(),
-    ),
-    FeatureItem.localized(
       id: 'remote',
       title: (l10n) => l10n.commonRemoteHost,
       summary: (l10n) => l10n.catalogRemoteSummary,
@@ -418,40 +407,14 @@ final featureSections = <FeatureSection>[
   ], id: settingsFeatureSection),
 ];
 
-/// [featureSections] with HarmonyOS's own page where 手机操控 isn't there
-/// (androidSystemFeaturesProvider).
-final _sectionsWithoutAndroid = <FeatureSection>[
-  for (final section in featureSections)
-    section.items.any((item) => item.id == 'phone')
-        ? FeatureSection.localized(
-            section.titleIn,
-            [
-              for (final item in section.items)
-                if (item.id != 'phone')
-                  item
-                else
-                  FeatureItem.localized(
-                    id: 'system-actions',
-                    title: (l10n) => l10n.catalogSystemActions,
-                    summary: (l10n) => l10n.catalogSystemActionsSummary,
-                    icon: AppIcons.phoneControl,
-                    tile: FeatureKind.phone,
-                    native: (_) => const SystemActionsPage(),
-                  ),
-            ],
-            note: section.note,
-            id: section.id,
-          )
-        : section,
-];
-
 /// The section the host's plugin panels join.
 String get pluginFeatureSection => appL10n.catalogPlugins;
 
 /// 全部功能's sections, with an entry per plugin panel the host has (`main`)
 /// at the end of 插件. Exactly [featureSections] without one (on Android).
 final featureSectionsProvider = Provider.autoDispose<List<FeatureSection>>((ref) {
-  final sections = ref.watch(androidSystemFeaturesProvider) ? featureSections : _sectionsWithoutAndroid;
+  // DSH-FN 没有手机本地引擎：手机操控（需要引擎发工具调用回手机）不再提供。
+  final sections = featureSections;
   final plan = ref.watch(seatPlanProvider(const SeatRequest(slot: Slots.main, placement: SeatPlacement.page)));
   final items = plan.visible;
   if (items.isEmpty) return sections;
