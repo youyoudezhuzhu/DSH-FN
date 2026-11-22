@@ -1,0 +1,7 @@
+# Keep binary assets byte-for-byte; no line-ending conversion on vendored resources.
+*.png binary
+*.jpg binary
+*.webp binary
+*.ttf binary
+*.otf binary
+*.gif binary

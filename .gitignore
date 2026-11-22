@@ -1,0 +1,27 @@
+# Dart / Flutter tool state
+**/.dart_tool/
+app/build/
+app/android/build/
+# build outputs never belong in git
+*.apk
+*.aab
+# golden-test failure dumps (flutter test writes them next to the goldens)
+**/test/**/failures/
+app/test/promo_capture/
+
+# Python bytecode from tooling/
+**/__pycache__/
+*.pyc
+
+# Release assets (tooling/release_assets.py)
+/dist/
+
+# Licensed companion pack is supplied at build time, like the main release.
+app/assets/companion/whale-girl.zip
+
+# local scratch (agent notes, review packets)
+.harness-tmp*/
+.claude/
+tooling/*.log
+tooling/env.sh
+tooling/shots/
