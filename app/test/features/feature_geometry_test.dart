@@ -118,26 +118,26 @@ void main() {
     await tester.pumpWidget(
       _page(
         ListPageCard(
-          title: '规则',
+          title: '文件',
           children: [
             ListPageRow(
               key: const ValueKey('row'),
-              icon: AppIcons.appRules,
-              title: '应用名单',
-              subtitle: '4 个不碰 · 1 个每步确认',
+              icon: AppIcons.web,
+              title: '已分享的链接',
+              subtitle: '4 个有效 · 1 个已过期',
               onTap: () {},
             ),
-            const ListPageRow(key: ValueKey('value'), icon: AppIcons.web, title: '时区', value: 'Asia/Shanghai'),
+            const ListPageRow(key: ValueKey('value'), icon: AppIcons.terminal, title: '时区', value: 'Asia/Shanghai'),
           ],
         ),
       ),
     );
     await pumpFrames(tester);
     final row = tester.getRect(find.byKey(const ValueKey('row')));
-    final glyph = tester.getRect(find.byIcon(AppIcons.appRules));
+    final glyph = tester.getRect(find.byIcon(AppIcons.web));
     final chevron = tester.getRect(find.byIcon(AppIcons.disclosure));
-    final title = tester.getRect(find.text('应用名单'));
-    final group = tester.getRect(find.text('规则'));
+    final title = tester.getRect(find.text('已分享的链接'));
+    final group = tester.getRect(find.text('文件'));
     final card = tester.getRect(find.byType(GlassSurface));
 
     expect(row.left, card.left);
