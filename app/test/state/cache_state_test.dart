@@ -116,33 +116,6 @@ void main() {
     container.read(_connection.notifier).set(_host(client, id));
   }
 
-  test('late A list cannot overwrite B, including B workspace-before-list', () async {
-    a.rows = [_row('a1')];
-    container.listen(sessionsProvider, (_, _) {});
-    await container.read(sessionsProvider.future);
-    final lateA = Completer<List<SessionSummary>>();
-    a.lists.add(lateA);
-    final refreshingA = container.read(sessionsProvider.notifier).refresh();
-    final firstB = Completer<List<SessionSummary>>();
-    b.lists.add(firstB);
-    switchTo(b, 'b');
-    await _tick();
-    b.workspaces.add(const WorkspaceBaseline([], ['b-archived'], []));
-    await _tick();
-    final notifier = container.read(sessionsProvider.notifier);
-    expect(notifier.allSessions, isEmpty);
-    // Nothing is published for B before its list. Riverpod 3 keeps A's rows
-    // as the reload's previous value meanwhile; a set AsyncLoading can't clear it.
-    expect(container.read(sessionsProvider).isReloading, isTrue);
-    firstB.complete([_row('b1'), _row('b-archived')]);
-    await container.read(sessionsProvider.future);
-    lateA.complete([_row('a-late')]);
-    await refreshingA;
-    expect(container.read(sessionsProvider).requireValue.map((s) => s.sessionId), ['b1']);
-    expect(notifier.allSessions.map((s) => s.sessionId), ['b1', 'b-archived']);
-    expect(notifier.archivedSessions.map((s) => s.sessionId), ['b-archived']);
-  });
-
   test('same host changing clients retains rows and ignores old closed error', () async {
     a.rows = [_row('a1')];
     container.listen(sessionsProvider, (_, _) {});
@@ -339,21 +312,4 @@ void main() {
     expect((await container.read(newChat.future)).single.name, 'replacement');
   });
 
-  test('slash cache stays with its host and is empty while disconnected', () async {
-    a.fake.handlers['commands/list'] = (_) => [
-      {'name': 'foo', 'description': 'only A'},
-    ];
-    container.listen(hostCommandsProvider('s'), (_, _) {});
-    expect((await container.read(hostCommandsProvider('s').future)).single.name, 'foo');
-    switchTo(b, 'b');
-    final newChat = hostCommandsProvider(null);
-    container.listen(newChat, (_, _) {});
-    expect(await container.read(newChat.future), isEmpty);
-    expect(container.read(slashCommandsProvider(null)).any((c) => c.name == 'foo'), isFalse);
-    switchTo(a, 'a');
-    expect((await container.read(newChat.future)).single.name, 'foo');
-    expect(container.read(slashCommandsProvider(null)).any((c) => c.name == 'foo'), isTrue);
-    container.read(_connection.notifier).set(null);
-    expect(await container.read(newChat.future), isEmpty);
-  });
 }

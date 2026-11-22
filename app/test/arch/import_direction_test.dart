@@ -12,7 +12,6 @@ import 'package:flutter_test/flutter_test.dart';
 import '../../tool/import_graph.dart';
 
 const _allowed = {
-  'dev/pet_actions_probe_main.dart -> ui/chat/voice/voice_bridge.dart',
   'diagnostics/redact.dart -> ui/chat/secret_mask.dart',
   'links/app_links.dart -> ui/share_hosted/hosted_link_host.dart',
   'links/page_links.dart -> ui/companion/companion_page.dart',

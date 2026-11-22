@@ -2,7 +2,7 @@
 
 **DSH-FN** 是一个专门的 Android 客户端：打开 App，输入飞牛 fnconnect 的 ID，就能连接你飞牛 NAS 上运行的 **DeepSeek Harness（DSH）**，在手机上继续用那边的会话、模型、插件和工作区。
 
-> 本项目 fork 自 [ccch1mneyyy/dsh-go](https://github.com/ccch1mneyyy/dsh-go)（AGPL-3.0），并做了大幅裁剪：
+> 仓库：<https://github.com/youyoudezhuzhu/DSH-FN>。本项目 fork 自 [ccch1mneyyy/dsh-go](https://github.com/ccch1mneyyy/dsh-go)（AGPL-3.0），并做了大幅裁剪：
 > - **删除了"安卓本地运行 DSH"** 的全部能力（PRoot / 内置 Linux / 本机引擎及其安装、安全模式、升级、本机诊断）；
 > - **删除了 SSH、ds-harness-remote 中继、WebRTC** 等通用远程链路；
 > - **只保留并重做了一种远程连接**：飞牛 fnOS，通过 fnconnect ID 自动连接。
@@ -73,6 +73,7 @@ tooling/            构建脚本
 - 依赖飞牛统一网关的登录态；飞牛改动机器登录/网关行为时可能需要更新 App。
 - 依赖手机本地引擎的功能（手机操控桥、本机引擎设置、本机文件/终端等）已随本地运行能力一并移除或不提供。
 - 仅在 Android 上维护；上游的 iOS / 鸿蒙宿主已删除。
+- 测试：保留与远程连接/会话/聊天相关的用例（`app/test`、`packages/dsh_client`）；上游的视觉 golden 测试与只服务本机引擎的测试未随 fork 保留。
 
 ## 许可
 
