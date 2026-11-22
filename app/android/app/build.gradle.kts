@@ -92,6 +92,9 @@ android {
 
     packaging {
         jniLibs {
+            // AGP 9 rejects android:extractNativeLibs in the manifest; keep the app's
+            // previous behaviour (native libraries extracted at install) here instead.
+            useLegacyPackaging = true
             // sherpa_onnx_android_* 1.13.4 and ORT Android 1.27.0 each ship an ORT 1.27.0
             // (sherpa's own build): either serves both, with the same exports.
             pickFirsts += "**/libonnxruntime.so"
