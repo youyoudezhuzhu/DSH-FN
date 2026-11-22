@@ -123,7 +123,7 @@ jobs:
       - name: Install the CJK fonts the widget tests load
         run: |
           sudo apt-get update -qq
-          sudo apt-get install -y -qq fonts-noto-cjk fonts-noto-color-emoji
+          sudo apt-get install -y -qq fonts-noto-cjk fonts-noto-cjk-extra fonts-noto-color-emoji
       - run: flutter pub get --enforce-lockfile
       # The upstream full suite covered the removed on-device engine, SSH, relay
       # and golden screenshots; this fork keeps the modules it still ships.
