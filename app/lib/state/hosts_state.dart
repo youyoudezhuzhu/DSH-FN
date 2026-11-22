@@ -51,10 +51,10 @@ class HostRef {
   static HostRef decode(String? raw) => const HostRef.fnos();
 
   @override
-  bool operator ==(Object other) => other is HostRef && other.kind == kind;
+  bool operator ==(Object other) => other is HostRef && other.kind == kind && other.id == id;
 
   @override
-  int get hashCode => kind.hashCode;
+  int get hashCode => Object.hash(kind, id);
 
   @override
   String toString() => 'HostRef(${kind.name}:$id)';
@@ -247,11 +247,18 @@ class ActiveHostController extends Notifier<HostRef> {
     return HostRef.fnos(config.fnconnectId, config.name ?? config.fnconnectId);
   }
 
-  /// 只有一个主机：切换是空操作。
-  void select(HostRef host) {}
+  /// 切换当前主机引用。App 只有一个飞牛主机；保留这个入口让按主机分键的
+  /// 缓存/通知在状态层继续按 [hostId] 隔离（配置变化时会在 [build] 里重建）。
+  void select(HostRef host) => state = host;
 
-  /// 主机被删除后回到"未配置"的占位主机。
-  Future<void> forget(bool Function(HostRef host) gone) async {}
+  /// 主机被删除后回到配置里的那一个（没有配置时是空 id 的占位主机）。
+  Future<void> forget(bool Function(HostRef host) gone) async {
+    if (!gone(state)) return;
+    final config = ref.read(fnosHostProvider).config;
+    state = config == null
+        ? const HostRef.fnos()
+        : HostRef.fnos(config.fnconnectId, config.name ?? config.fnconnectId);
+  }
 }
 
 final activeHostProvider = NotifierProvider<ActiveHostController, HostRef>(ActiveHostController.new);
