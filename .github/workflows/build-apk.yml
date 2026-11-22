@@ -56,6 +56,26 @@ jobs:
         with:
           gradle-version: ${{ env.GRADLE_VERSION }}
 
+      # The Flutter Gradle plugin is an included build: its own settings resolve
+      # plugins from gradlePluginPortal only, and the portal 303s/404s some Kotlin
+      # artifacts. An init script adds Maven Central (and the mirror) for every
+      # build in this job, included ones too.
+      - name: Prefer Maven Central for Gradle plugin resolution
+        run: |
+          mkdir -p "$HOME/.gradle/init.d"
+          cat > "$HOME/.gradle/init.d/dsh-plugin-repos.gradle.kts" <<'EOF'
+          settingsEvaluated {
+              pluginManagement {
+                  repositories {
+                      mavenCentral()
+                      maven { url = uri("https://maven.aliyun.com/repository/central") }
+                      google()
+                      gradlePluginPortal()
+                  }
+              }
+          }
+          EOF
+
       - name: Project metadata, Gradle wrapper, dependencies
         working-directory: app
         run: |

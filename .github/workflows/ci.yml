@@ -183,6 +183,21 @@ jobs:
         with:
           gradle-version: ${{ env.GRADLE_VERSION }}
       # Compiles the native layer (no Dart build task: build-apk.yml covers packaging).
+      - name: Prefer Maven Central for Gradle plugin resolution
+        run: |
+          mkdir -p "$HOME/.gradle/init.d"
+          cat > "$HOME/.gradle/init.d/dsh-plugin-repos.gradle.kts" <<'EOF'
+          settingsEvaluated {
+              pluginManagement {
+                  repositories {
+                      mavenCentral()
+                      maven { url = uri("https://maven.aliyun.com/repository/central") }
+                      google()
+                      gradlePluginPortal()
+                  }
+              }
+          }
+          EOF
       - working-directory: app/android
         run: gradle --stacktrace :app:compileArm64DebugKotlin
 
