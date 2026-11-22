@@ -46,9 +46,22 @@ class HostRef {
 
   String encode() => jsonEncode({'kind': kind.name, 'id': id, if (name != null) 'name': name});
 
-  /// 旧版本存下的主机（本机 / SSH / 中继）一律回到飞牛主机；
-  /// 具体配置由 [fnosHostProvider] 从自己的键读取。
-  static HostRef decode(String? raw) => const HostRef.fnos();
+  /// 从 [encode] 的形状还原；旧版本存下的本机 / SSH / 中继主机只保留
+  /// 飞牛主机这一种（id 为空时由 [fnosHostProvider] 的配置补齐）。
+  static HostRef decode(String? raw) {
+    if (raw == null || raw.isEmpty) return const HostRef.fnos();
+    try {
+      final decoded = jsonDecode(raw);
+      if (decoded is Map) {
+        final id = decoded['id'];
+        final name = decoded['name'];
+        return HostRef.fnos(id is String ? id : '', name is String && name.isNotEmpty ? name : null);
+      }
+    } catch (_) {
+      // 坏数据（旧格式/损坏的 prefs）：回到空主机。
+    }
+    return const HostRef.fnos();
+  }
 
   @override
   bool operator ==(Object other) => other is HostRef && other.kind == kind && other.id == id;
