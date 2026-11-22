@@ -196,7 +196,6 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 15
     env:
-      PUB_HOSTED_URL: https://pub.flutter-io.cn # The registry these lockfiles were resolved from.
     steps:
       - *checkout
       - *flutter
