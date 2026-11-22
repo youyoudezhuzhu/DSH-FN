@@ -93,36 +93,17 @@ data class PetHost(val ref: String, val label: String, val current: Boolean)
 
 /** The long-press menu's rows (docs/design/pets.md §2.7): shortcuts only where they apply. */
 enum class PetMenuItem {
-    ASK, NEW_CHAT, SCREENSHOT, STOP, SWITCH_HOST, SNOOZE, SETTINGS;
+    ASK, NEW_CHAT, STOP, SWITCH_HOST, SNOOZE, SETTINGS;
 
     companion object {
-        /** [screenshots]: whether this Android can take one (the accessibility screenshot, Android 11+). */
-        fun of(push: PetPush?, screenshots: Boolean): List<PetMenuItem> = buildList {
+        fun of(push: PetPush?): List<PetMenuItem> = buildList {
             add(ASK)
             add(NEW_CHAT)
-            if (screenshots) add(SCREENSHOT)
             if (push?.canStop == true) add(STOP)
             if ((push?.hosts?.size ?: 0) > 1) add(SWITCH_HOST)
             add(SNOOZE)
             add(SETTINGS)
         }
-    }
-}
-
-/** Invalidating an action must not release the visibility gate before the actual capture ends. */
-internal class PetCaptureState {
-    class Request internal constructor() { internal var valid = true }
-    private var pending: Request? = null
-    val inFlight: Boolean get() = pending != null
-    fun begin(): Request? {
-        if (inFlight) return null
-        return Request().also { pending = it }
-    }
-    fun invalidate() { pending?.valid = false }
-    fun finish(request: Request): Boolean {
-        if (pending !== request) return false
-        pending = null
-        return request.valid
     }
 }
 
@@ -311,8 +292,7 @@ internal class PetTaps(private val timeoutMs: Long, private val slop: Float) {
  *
  * - shows only while the app is in the background and something is going on ([PetPush.active]),
  *   or always with 「一直显示」;
- * - hides while the app is on screen, during a phone-control task (its own status pill is up),
- *   and for the rest of the day after 「今天不再显示」;
+ * - hides while the app is on screen, and for the rest of the day after 「今天不再显示」;
  * - pauses with the screen off or locked;
  * - collapses [IDLE_COLLAPSE_MS] after the last thing going on (not with 「一直显示」);
  * - stays lit while active; after activity ends, dims after [DIM_AFTER_MS] idle unless a touch
@@ -326,13 +306,12 @@ class OverlayMachine {
     var alwaysShow = false
     var snoozedUntil = 0L
 
-    /** A window type is usable (accessibility overlay, or the overlay permission works). */
+    /** A window type is usable (the overlay permission works). */
     var canHost = false
 
     /** The pack for the pushed id is loaded. */
     var hasPet = false
     var interactive = true
-    var phoneTask = false
     var dshService = false
 
     /** 问一句 is open, or an answer from a bubble is on its way: the pet stays out and lit. */
@@ -430,7 +409,6 @@ class OverlayMachine {
             bubble?.untilMs,
             if (!alwaysShow && !push.active && lastActiveAt > 0) lastActiveAt + IDLE_COLLAPSE_MS else null,
         ).minOrNull()
-        if (phoneTask) return hidden("phone task", keepAlive = true, wakeAt = wakeAt)
         if (!interactive) return Decision(Visibility.PAUSED, false, !dshService, bubble, wakeAt, "screen off")
         return Decision(Visibility.SHOWN, false, !dshService, bubble, wakeAt, if (push.active) "active" else "recent")
     }

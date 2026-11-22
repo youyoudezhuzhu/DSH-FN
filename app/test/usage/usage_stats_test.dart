@@ -8,7 +8,6 @@
 import 'dart:async';
 import 'dart:convert';
 
-import 'package:dsh_app/phone/phone_channel.dart';
 import 'package:dsh_app/state/android_features.dart';
 import 'package:dsh_app/usage/usage_ledger.dart';
 import 'package:dsh_app/usage/usage_net.dart';
@@ -35,7 +34,6 @@ Future<void> settle() async {
 Future<ProviderContainer> start({
   Map<String, Object> prefs = const {},
   String? engine,
-  PhoneChannel? phone,
   UsageDevice phoneFacts = testDevice,
   String? platform,
 }) async {
@@ -47,7 +45,6 @@ Future<ProviderContainer> start({
         http: http,
         onResumes: (onResume) => resume = onResume,
         engine: engine,
-        phone: phone,
         device: phoneFacts,
       ),
       if (platform != null) operatingSystemProvider.overrideWithValue(platform),
@@ -497,32 +494,6 @@ void main() {
     now = DateTime(2026, 10, 29, 9);
     await c.comeBack();
     expect(http.requests.single['engine'], 'none');
-  });
-
-  test('phone control: each task counts once, when it starts', () async {
-    final phone = FakePhone();
-    final c = await start(prefs: noticed, phone: phone);
-    PhoneStatus task(bool active, int id) => PhoneStatus(
-      task: PhoneTaskStatus(id: id, active: active),
-    );
-    for (final s in [task(true, 1), task(true, 1), task(false, 1), task(true, 2), task(true, 3), task(false, 3)]) {
-      phone.pushes.add(s);
-      await settle();
-    }
-    now = DateTime(2026, 10, 29, 9);
-    await c.comeBack();
-    expect((http.requests.single['counts']! as Map)['phone'], 3);
-  });
-
-  test('phoneTaskStarted: a new number or active again', () {
-    const idle = PhoneTaskStatus();
-    expect(phoneTaskStarted(idle, const PhoneTaskStatus(active: true)), isTrue);
-    expect(phoneTaskStarted(const PhoneTaskStatus(active: true), const PhoneTaskStatus(active: true)), isFalse);
-    expect(
-      phoneTaskStarted(const PhoneTaskStatus(id: 1, active: true), const PhoneTaskStatus(id: 2, active: true)),
-      isTrue,
-    );
-    expect(phoneTaskStarted(const PhoneTaskStatus(id: 1, active: true), const PhoneTaskStatus(id: 1)), isFalse);
   });
 
   test('debug builds and tests count nothing and send nothing', () async {

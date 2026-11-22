@@ -255,29 +255,6 @@ String questionText(UserQuestionRequest request) {
       : appL10n.stateAlertQuestionText(first);
 }
 
-/// The phone card must show the whole exact call, never a shortened command.
-/// Oversize, secret-masked or unreadable calls open the full in-app approval.
-String? phoneApprovalPreview(ApprovalRequest request, ToolCallPart? call) {
-  if (call == null ||
-      request.callId != call.id ||
-      request.toolName != call.name ||
-      !RegExp(r'^[A-Za-z0-9_.:-]{1,160}$').hasMatch(call.name) ||
-      call.arguments.length > 3072) {
-    return null;
-  }
-  final args = call.decodedArguments;
-  if (args == null) return null;
-  final raw = '${call.name}\n${jsonEncode(args)}';
-  // Values recognized by the chat's secret mask stay out of the overlay.
-  // A masked action is incomplete, so it is review-only instead.
-  if (_masked(raw) != raw) return null;
-  final text = raw.replaceAllMapped(
-    RegExp('[\\u061c\\u200b-\\u200f\\u202a-\\u202e\\u2066-\\u2069]'),
-    (m) => '\\u${m[0]!.codeUnitAt(0).toRadixString(16).padLeft(4, '0')}',
-  );
-  return text.length <= 4096 ? text : null;
-}
-
 /// Longest action the pet's bubble shows (it has four lines).
 const petApprovalMax = 120;
 
@@ -508,7 +485,6 @@ class HostAlertTracker {
   /// Pending approvals alerted with buttons, by eventId.
   final Map<String, ApprovalRequest> _approvals = {};
   final Map<String, _RequestScope> _requestScopes = {};
-  final Map<String, ({ApprovalRequest request, String text})> _phoneApprovals = {};
   final Map<String, ChatAlert> _requestAlerts = {};
 
   /// Pending approvals the pet's bubble showed whole ([petApprovalText]), by eventId.
@@ -539,9 +515,6 @@ class HostAlertTracker {
         ? null
         : scope;
   }
-
-  ({ApprovalRequest request, String text})? phoneApprovalFor(String eventId) =>
-      requestScope(eventId) == null ? null : _phoneApprovals[eventId];
 
   Iterable<ChatAlert> get pendingAlerts =>
       _requestAlerts.entries.where((entry) => requestScope(entry.key) != null).map((entry) => entry.value);
@@ -575,7 +548,6 @@ class HostAlertTracker {
         _companionRunning.clear();
         _readyProvenance = provenance;
         _requestScopes.clear();
-        _phoneApprovals.clear();
         _approvals.clear();
         _petApprovals.clear();
         _questions.clear();
@@ -614,7 +586,6 @@ class HostAlertTracker {
         }
         _approvals.remove(eventId);
         _requestScopes.remove(eventId);
-        _phoneApprovals.remove(eventId);
         _petApprovals.remove(eventId);
         _questions.remove(eventId);
         _requestAlerts.remove(eventId);
@@ -643,7 +614,6 @@ class HostAlertTracker {
         _requests.removeWhere((_, s) => s == sessionId);
         _approvals.removeWhere((id, _) => !_requests.containsKey(id));
         _requestScopes.removeWhere((id, _) => !_requests.containsKey(id));
-        _phoneApprovals.removeWhere((id, _) => !_requests.containsKey(id));
         _petApprovals.removeWhere((id) => !_requests.containsKey(id));
         _questions.removeWhere((id, _) => !_requests.containsKey(id));
         _requestAlerts.removeWhere((id, _) => !_requests.containsKey(id));
@@ -657,7 +627,6 @@ class HostAlertTracker {
     for (final id in _stale) {
       _approvals.remove(id);
       _requestScopes.remove(id);
-      _phoneApprovals.remove(id);
       _petApprovals.remove(id);
       _questions.remove(id);
       _requestAlerts.remove(id);
@@ -701,8 +670,6 @@ class HostAlertTracker {
           if (!current()) return;
           preview = approvalPreview(approval, call);
           if (preview != null) petText = petApprovalText(approval, call);
-          final phoneText = phoneApprovalPreview(approval, call);
-          if (phoneText != null) _phoneApprovals[eventId] = (request: approval, text: phoneText);
         } catch (_) {
           // Unreadable: the notification still opens the conversation.
         }

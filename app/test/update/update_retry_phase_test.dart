@@ -25,7 +25,7 @@ void main() {
       test('${badCache ? 'bad complete cache' : 'uncached control'} $stop: downloading phase and retry', () async {
         final dir = await Directory.systemTemp.createTemp('updater-retry-phase-');
         final server = await HttpServer.bind(InternetAddress.loopbackIPv4, 0);
-        const name = 'dsh-go-1.2.0-arm64.apk';
+        const name = 'DSH-FN-1.2.0-arm64.apk';
         final bytes = Uint8List.fromList(List.generate(1024 * 1024, (i) => i % 251));
         final target = File('${dir.path}/$name');
         if (badCache) await target.writeAsBytes(Uint8List(bytes.length));

@@ -25,8 +25,8 @@ ReleaseInfo _release({String notes = _both, Map<String, String>? byLocale}) => p
   'notesByLocale': ?byLocale,
   'assets': {
     'arm64': {
-      'name': 'dsh-go-0.9.2-arm64.apk',
-      'url': 'https://go.dshtui.com/beta/0.9.2/dsh-go-0.9.2-arm64.apk',
+      'name': 'DSH-FN-0.9.2-arm64.apk',
+      'url': 'https://go.dshtui.com/beta/0.9.2/DSH-FN-0.9.2-arm64.apk',
       'size': 1,
     },
   },

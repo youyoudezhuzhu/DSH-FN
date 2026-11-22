@@ -16,7 +16,6 @@ import '../../pets/overlay_channel.dart';
 import '../../pets/pet_prefs.dart';
 import '../common/expand_reveal.dart';
 import '../common/risk_notice.dart';
-import '../phone/restricted_settings_guide.dart';
 import '../settings/settings_widgets.dart';
 
 /// 「App 外显示」. Nothing without the native side (tests, desktop).
@@ -57,9 +56,6 @@ class _PetOverlaySettingsSectionState extends ConsumerState<PetOverlaySettingsSe
     if (!s.native) return const SizedBox.shrink();
     final overlay = ref.read(petOverlayProvider.notifier);
     final on = s.working;
-    // Sideloaded on Android 13+: the system switch may be greyed out until
-    // 「允许受限制的设置」. Offered once a trip there came back empty.
-    final restricted = s.refused && s.sdk >= 33 && s.permission != PetOverlayPermission.blocked;
     return SettingsSection(
       children: [
         SettingsSwitchTile(
@@ -79,16 +75,6 @@ class _PetOverlaySettingsSectionState extends ConsumerState<PetOverlaySettingsSe
         ),
         if (on) const _OverlayRendererTile(),
         if (on) const _OverlayFramingTile(),
-        if (restricted)
-          SettingsTile(
-            title: l10n.botsPetSwitchDisabled,
-            value: Text(l10n.botsPetRestrictedSettings),
-            onTap: () => Navigator.of(context).push(
-              MaterialPageRoute<void>(
-                builder: (_) => const RestrictedSettingsGuidePage(target: RestrictedTarget.overlay),
-              ),
-            ),
-          ),
         if (on && s.snoozed)
           SettingsTile(
             title: l10n.botsPetHiddenToday,

@@ -429,39 +429,10 @@ abstract final class AppIcons {
   /// 设置 › 隐私与分享.
   static const privacy = DshGlyphs.lockKey;
 
-  // ── 手机操控 ────────────────────────────────────────────────
-  static const phoneControl = DshGlyphs.handTap;
-  static const readScreen = DshGlyphs.scan;
+  // ── 通用 ────────────────────────────────────────────────────
   static const askFirst = DshGlyphs.handPalm;
-  static const askPerTask = DshGlyphs.circleHalf;
-  static const noConfirm = DshGlyphs.lightning;
-  static const appRules = DshGlyphs.listChecks;
-  static const dndMode = DshGlyphs.stack;
   static const keepAlive = DshGlyphs.batteryPlus;
-  static const operate = DshGlyphs.handPointing;
   static const alarmClock = DshGlyphs.alarm;
-  static const returnToApp = DshGlyphs.arrowBendUpLeft;
-  static const backgroundPrompt = DshGlyphs.bell;
-  static const overlayOpacity = DshGlyphs.slidersHorizontal;
-  static const overlayBall = DshGlyphs.radioButton;
-
-  /// 解除限制, its 「已解除限制」 tag, and its three rules.
-  static const unlocks = DshGlyphs.lockSimpleOpen;
-  static const unlockSystem = DshGlyphs.gearSix;
-  static const unlockSecrets = DshGlyphs.key;
-  static const unlockOwnApp = DshGlyphs.browser;
-
-  /// 解除限制's confirmation page: what can go wrong, and the disclaimer.
-  static const riskWarning = DshGlyphs.shieldWarning;
-
-  // ── 系统权限(首次启动的「按功能开启」与 设置 › 系统权限)──────
-  static const systemAccess = DshGlyphs.shieldCheck;
-  static const fileAccess = DshGlyphs.folderUser;
-  static const accessibility = DshGlyphs.scan;
-  static const overlayPermission = DshGlyphs.stack;
-  static const highPower = DshGlyphs.lightning;
-  static const autostart = DshGlyphs.power;
-  static const backgroundPopUp = DshGlyphs.boxArrowUp;
 
   // ── DS Bot 与群聊 ───────────────────────────────────────────
   static const bot = DshGlyphs.robot;

@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="referrer" content="no-referrer">
 <meta name="robots" content="noindex">
-<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-SQx9DjHcIv7KDXzxussj4x+ZyUAaCegGkYXT1lOZc8A='; style-src 'unsafe-inline'; img-src data: blob:; connect-src 'self'; base-uri 'none'; form-action 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-O+sHTTfAU5Qddye5GVL5JM6YPY1+D/rE0uVERlwnieY='; style-src 'unsafe-inline'; img-src data: blob:; connect-src 'self'; base-uri 'none'; form-action 'none'">
 <meta name="color-scheme" content="light dark">
 <title>dsh-go 对话</title>
 <style>/* dsh-go conversation viewer (viewer.js). Shared by the landing page and the
@@ -1211,7 +1211,7 @@
     }
     if (opts.download !== false) {
       var dl = el('a', 'dv-btn ' + (opts.appLink ? 'dv-secondary' : 'dv-primary'), tr('download'));
-      dl.href = opts.download || 'https://github.com/ccch1mneyyy/dsh-go/releases/latest';
+      dl.href = opts.download || 'https://github.com/youyoudezhuzhu/DSH-FN/releases/latest';
       dl.rel = 'noopener';
       dl.target = '_blank';
       actions.appendChild(dl);
@@ -1843,7 +1843,7 @@
       opener(host);
     } catch (e) {
       var dl = el('a', 'dv-btn dv-secondary', tr('download'));
-      dl.href = 'https://github.com/ccch1mneyyy/dsh-go/releases/latest';
+      dl.href = 'https://github.com/youyoudezhuzhu/DSH-FN/releases/latest';
       dl.rel = 'noopener';
       card(host, errorText(e), null, dl);
     }

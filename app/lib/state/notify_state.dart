@@ -1,6 +1,4 @@
 import 'dart:async';
-import 'dart:convert';
-import 'dart:math';
 
 import 'package:dsh_client/dsh_client.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -9,22 +7,36 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../notify/chat_alerts.dart';
 import '../notify/answer_native_request.dart';
 import '../notify/notify_channel.dart';
-import '../phone/phone_channel.dart';
-import '../phone/phone_approval.dart';
 import '../companion/companion_state.dart';
 import '../pets/pet_signals.dart' show petHearAlert, petOnScreenProvider, petEventBusProvider;
-import 'app_info.dart';
 import 'android_features.dart';
 import 'bots_state.dart';
 import 'chat_state.dart';
 import 'connection_state.dart';
 import 'hosts_state.dart';
-import 'phone_turn_end.dart';
-import 'phone_state.dart' show phoneChannelProvider;
 import 'sessions_state.dart';
 
 export '../notify/chat_alerts.dart';
 export '../notify/notify_channel.dart';
+
+/// Answers one displayed native approval only in the generation that presented
+/// it (a notification button or the pet's bubble).
+Future<bool> _answerApproval({
+  required DshClient client,
+  required MuxGeneration generation,
+  required ApprovalRequest request,
+  required ApprovalDecision decision,
+  required bool Function() current,
+}) {
+  if (decision != ApprovalDecision.allowOnce && decision != ApprovalDecision.reject) return Future.value(false);
+  return answerNativeRequest(
+    client: client,
+    generation: generation,
+    eventId: request.eventId,
+    outcome: {'kind': 'result', 'value': decision.wire},
+    current: current,
+  );
+}
 
 final notifyChannelProvider = Provider<NotifyChannel>((ref) => NotifyChannel());
 
@@ -253,39 +265,6 @@ NotifyPost postFor(ChatAlert alert) => NotifyPost(
   requestToken: alert.petToken,
 );
 
-class _PhoneAlertPrompt {
-  _PhoneAlertPrompt({
-    required this.scope,
-    required this.lifetime,
-    required this.requestId,
-    required this.alert,
-    required this.client,
-    required this.generation,
-    required this.tracker,
-    required this.requestScope,
-    required this.channel,
-  });
-
-  final Ref scope;
-  final Object lifetime;
-  final String requestId;
-  final ChatAlert alert;
-  final DshClient client;
-  final MuxGeneration? generation;
-  final HostAlertTracker tracker;
-  final Object requestScope;
-  final PhoneChannel channel;
-  StreamSubscription<DshConnectionState>? mux;
-  StreamSubscription<PhoneStatus>? status;
-  bool submitted = false;
-
-  void retire() {
-    unawaited(mux?.cancel());
-    unawaited(status?.cancel());
-    if (submitted) unawaited(channel.cancelPrompt(requestId));
-  }
-}
-
 /// Watches the on-device engine and the active remote host for alerts, posts
 /// system notifications or raises the in-app banner (the state: the banner on
 /// screen, or null), and clears what the person has seen.
@@ -295,7 +274,6 @@ class _PhoneAlertPrompt {
 class ChatAlertsController extends Notifier<ChatAlert?> {
   final Map<HostRef, (HostConnection, HostAlertTracker)> _trackers = {};
   Object _lifetime = Object();
-  _PhoneAlertPrompt? _phonePrompt;
 
   /// False while [build] runs (listeners fire immediately, before there is a
   /// state to read or replace).
@@ -323,16 +301,12 @@ class ChatAlertsController extends Notifier<ChatAlert?> {
     }());
     ref.onDispose(() {
       _lifetime = Object();
-      _cancelPhonePrompt();
       unawaited(_actions?.cancel());
       for (final (_, tracker) in _trackers.values) {
         unawaited(tracker.dispose());
       }
       _trackers.clear();
     });
-    // Watching the phone task from the start, wherever alerts are (web mode too), so the turn
-    // that drove the phone is known when it ends (_onAlert).
-    ref.listen(phoneTurnEndProvider, (_, _) {});
     ref.listen(activeConnectionProvider, (_, next) {
       final conn = next.value;
       final host = conn == null ? null : _remoteRef(conn);
@@ -352,20 +326,12 @@ class ChatAlertsController extends Notifier<ChatAlert?> {
       }
     });
     ref.listen(appForegroundProvider, (_, foreground) {
-      // Attention banners are recovered from pending requests below, exactly
-      // once. Only terminal banners need a separate migration to the shade.
+      // Only terminal banners move to the shade: attention ones come back from
+      // their pending requests.
       final banner = _banner;
       if (!foreground && banner != null) {
         _banner = null;
         if (!banner.kind.attention) unawaited(_channel.show(postFor(banner)));
-      }
-      if (!foreground) {
-        // A request may have been quiet because its conversation was visible.
-        // Revisit every host; only local requests can use the phone prompt.
-        final pending = [for (final (_, tracker) in _trackers.values) ...tracker.pendingAlerts];
-        for (final alert in pending) {
-          if (!_offerPhonePrompt(alert)) _deliver(alert);
-        }
       }
     });
     _built = true;
@@ -415,7 +381,7 @@ class ChatAlertsController extends Notifier<ChatAlert?> {
     final request = attached.$2.approvalFor(action.eventId);
     if (request == null) return NotifyActionResult.gone;
     try {
-      final sent = await answerPhoneApproval(
+      final sent = await _answerApproval(
         client: attached.$1.client,
         generation: generation,
         request: request,
@@ -460,7 +426,7 @@ class ChatAlertsController extends Notifier<ChatAlert?> {
         if (request == null) {
           return attached.$2.approvalFor(eventId) == null ? NotifyActionResult.gone : NotifyActionResult.failed;
         }
-        final sent = await answerPhoneApproval(
+        final sent = await _answerApproval(
           client: attached.$1.client,
           generation: generation,
           request: request,
@@ -507,13 +473,12 @@ class ChatAlertsController extends Notifier<ChatAlert?> {
         connection != null &&
         identical(current.$1.client, connection.client) &&
         current.$2.updateCompanionConnection(previous: current.$1, next: connection)) {
-      // A name/cwd refresh wraps the same live client. Keep its pending scopes,
-      // phone card and alert history; future metadata uses the new wrapper.
+      // A name/cwd refresh wraps the same live client. Keep its pending scopes
+      // and alert history; future metadata uses the new wrapper.
       _trackers[host] = (connection, current.$2);
       return;
     }
     if (current != null) {
-      _cancelPhonePrompt(host: host);
       _trackers.remove(host);
       unawaited(current.$2.dispose());
     }
@@ -541,9 +506,6 @@ class ChatAlertsController extends Notifier<ChatAlert?> {
       onReannounce: (alert) {
         if (attached()) _onReannounce(alert);
       },
-      onRequestEpochChanged: (host) {
-        if (attached()) _cancelPhonePrompt(host: host);
-      },
       companionConnection: connection,
       isCompanionAttached: attached,
       onCompanionSignal: (delivery) {
@@ -559,11 +521,7 @@ class ChatAlertsController extends Notifier<ChatAlert?> {
   }
 
   void _onReannounce(ChatAlert alert) {
-    if (ref.read(operatingSystemProvider) != 'ohos') {
-      _offerPhonePrompt(alert);
-      return;
-    }
-    if (_offerPhonePrompt(alert) || ref.read(dsBotSessionFilterProvider)(alert.host, alert.sessionId)) return;
+    if (ref.read(dsBotSessionFilterProvider)(alert.host, alert.sessionId)) return;
     // HostReady invalidates old action tokens even when the same event is redelivered.
     // Refresh only a system notification; do not replay banners or pet activity.
     if (deliveryFor(
@@ -578,196 +536,9 @@ class ChatAlertsController extends Notifier<ChatAlert?> {
     }
   }
 
-  void _onAlert(ChatAlert alert, {bool ownerWaited = false}) {
-    final scope = ref;
-    final lifetime = _lifetime;
-    final attached = _trackers[alert.host];
-    if (attached == null) return;
-    final generation = attached.$1.client.mux.generation;
-    bool current() =>
-        scope.mounted &&
-        identical(_lifetime, lifetime) &&
-        identical(_trackers[alert.host]?.$2, attached.$2) &&
-        identical(attached.$1.client.mux.generation, generation) &&
-        attached.$2.source.connected;
-    if (_offerPhonePrompt(alert)) return;
-    // The turn that drove the phone: its overlay closes and the app may come
-    // back to the conversation first (state/phone_turn_end.dart); the alert
-    // follows, so it lands where the person is by then.
-    final phoneController = ref.read(phoneTurnEndProvider.notifier);
-    if (!ownerWaited &&
-        phoneController.deferTurnEnd(alert, () {
-          if (current()) _onAlert(alert, ownerWaited: true);
-        })) {
-      return;
-    }
-    final phone = phoneController.onTurnEnd(alert);
-    if (phone == null) return _deliver(alert);
-    unawaited(
-      phone.then((result) {
-        // Asked back and blocked (some vendors): the notification is the way there.
-        if (current() && result.current && !result.notified) _deliver(alert);
-      }),
-    );
-  }
-
-  bool _phoneCurrent(_PhoneAlertPrompt prompt) =>
-      prompt.scope.mounted &&
-      identical(_lifetime, prompt.lifetime) &&
-      identical(_phonePrompt, prompt) &&
-      identical(_trackers[prompt.alert.host]?.$2, prompt.tracker) &&
-      identical(_trackers[prompt.alert.host]?.$1.client, prompt.client) &&
-      identical(prompt.client.mux.generation, prompt.generation) &&
-      identical(prompt.tracker.requestScope(prompt.alert.eventId!), prompt.requestScope);
-
-  void _cancelPhonePrompt({HostRef? host, String? sessionId, String? eventId}) {
-    final prompt = _phonePrompt;
-    if (prompt == null ||
-        (host != null && prompt.alert.host != host) ||
-        (sessionId != null && prompt.alert.sessionId != sessionId) ||
-        (eventId != null && prompt.alert.eventId != eventId)) {
-      return;
-    }
-    _phonePrompt = null;
-    prompt.retire();
-  }
-
-  bool _offerPhonePrompt(ChatAlert alert) {
-    if (!alert.host.isLocal ||
-        !alert.kind.attention ||
-        alert.eventId == null ||
-        ref.read(appForegroundProvider) ||
-        _phonePrompt != null ||
-        ref.read(dsBotSessionFilterProvider)(alert.host, alert.sessionId)) {
-      return false;
-    }
-    final attached = _trackers[alert.host];
-    final requestScope = attached?.$2.requestScope(alert.eventId!);
-    if (attached == null || requestScope == null) return false;
-    final random = Random.secure();
-    final prompt = _PhoneAlertPrompt(
-      scope: ref,
-      lifetime: _lifetime,
-      requestId: base64UrlEncode(List.generate(24, (_) => random.nextInt(256))),
-      alert: alert,
-      client: attached.$1.client,
-      generation: attached.$1.client.mux.generation,
-      tracker: attached.$2,
-      requestScope: requestScope,
-      channel: ref.read(phoneChannelProvider),
-    );
-    _phonePrompt = prompt;
-    prompt.mux = prompt.client.mux.states.listen((_) {
-      if (identical(_phonePrompt, prompt)) _cancelPhonePrompt();
-    });
-    unawaited(_runPhonePrompt(prompt));
-    return true;
-  }
-
-  Future<void> _phoneFallback(_PhoneAlertPrompt prompt) async {
-    if (!_phoneCurrent(prompt)) return;
-    if (prompt.scope.read(appForegroundProvider)) {
-      // The native app fallback may already have brought the person here.
-      final viewed = prompt.scope.read(viewedChatProvider);
-      if (viewed?.host != prompt.alert.host || viewed?.sessionId != prompt.alert.sessionId) _banner = prompt.alert;
-      return;
-    }
-    // A phone operation waiting on a person remains accessible even when
-    // ordinary chat notifications are off. This last fallback only opens the
-    // exact conversation; it never offers a truncated approval action.
-    await prompt.scope
-        .read(notifyChannelProvider)
-        .tryShow(
-          NotifyPost(
-            group: notifyGroup(prompt.alert.host, prompt.alert.sessionId),
-            key: prompt.alert.key,
-            attention: true,
-            title: AppInfo.name,
-            text: prompt.alert.text,
-            publicText: prompt.alert.kind.publicText,
-            sessionId: prompt.alert.sessionId,
-            host: prompt.alert.host,
-            kind: prompt.alert.kind.name,
-            eventId: prompt.alert.eventId,
-          ),
-          stillCurrent: () => _phoneCurrent(prompt) && !prompt.scope.read(appForegroundProvider),
-        );
-  }
-
-  Future<void> _runPhonePrompt(_PhoneAlertPrompt prompt) async {
-    var enabled = false;
-    try {
-      final status = await prompt.channel.status().timeout(const Duration(seconds: 2));
-      if (!_phoneCurrent(prompt)) return;
-      if (!status.ready || !status.enabled || status.task.stopped || prompt.scope.read(appForegroundProvider)) {
-        _deliver(prompt.alert);
-        return;
-      }
-      enabled = true;
-      final taskId = status.task.active ? status.task.id : null;
-      if (status.task.active && taskId == null) {
-        await _phoneFallback(prompt);
-        return;
-      }
-      prompt.status = prompt.channel.statusChanges.listen((next) {
-        if (!identical(_phonePrompt, prompt)) return;
-        if (!next.ready ||
-            !next.enabled ||
-            next.task.stopped ||
-            (taskId == null ? next.task.active : !next.task.active || next.task.id != taskId)) {
-          _cancelPhonePrompt();
-        }
-      }, onError: (_) => _cancelPhonePrompt());
-      final approval = prompt.tracker.phoneApprovalFor(prompt.alert.eventId!);
-      prompt.submitted = true;
-      final result = await prompt.channel.presentPrompt(
-        requestId: prompt.requestId,
-        taskId: taskId,
-        sessionId: prompt.alert.sessionId,
-        host: prompt.alert.host.encode(),
-        text: approval?.text ?? prompt.alert.fullText ?? prompt.alert.text,
-        canApprove: approval != null,
-      );
-      if (!_phoneCurrent(prompt)) return;
-      final decision = switch (result.decision) {
-        PhonePromptDecision.allowOnce when result.presented != 'none' => ApprovalDecision.allowOnce,
-        PhonePromptDecision.reject || PhonePromptDecision.timeout => ApprovalDecision.reject,
-        _ => null,
-      };
-      if (approval != null &&
-          decision != null &&
-          identical(prompt.tracker.phoneApprovalFor(prompt.alert.eventId!)?.request, approval.request)) {
-        // All ownership checks run immediately before the actual RPC. Engine
-        // answers contain the original request, not UI text or a screen read.
-        final generation = prompt.generation;
-        if (generation == null) {
-          await _phoneFallback(prompt);
-          return;
-        }
-        await answerPhoneApproval(
-          client: prompt.client,
-          generation: generation,
-          request: approval.request,
-          decision: decision,
-          current: () => _phoneCurrent(prompt),
-        );
-      } else if (result.decision != PhonePromptDecision.stopped) {
-        // OPEN proves a navigation attempt, not that Android resumed the app.
-        // If still in the background, retain the exact request's review entry.
-        await _phoneFallback(prompt);
-      }
-    } catch (_) {
-      if (_phoneCurrent(prompt)) {
-        if (enabled) {
-          await _phoneFallback(prompt);
-        } else {
-          _deliver(prompt.alert);
-        }
-      }
-    } finally {
-      prompt.retire();
-      if (identical(_phonePrompt, prompt)) _phonePrompt = null;
-    }
+  void _onAlert(ChatAlert alert) {
+    if (_trackers[alert.host] == null) return;
+    _deliver(alert);
   }
 
   void _deliver(ChatAlert alert) {
@@ -800,14 +571,12 @@ class ChatAlertsController extends Notifier<ChatAlert?> {
   }
 
   void _onWithdraw(HostRef host, String sessionId, String key) {
-    _cancelPhonePrompt(host: host, eventId: key);
     unawaited(_channel.cancel(notifyGroup(host, sessionId), key));
     final banner = _banner;
     if (banner != null && banner.host == host && banner.sessionId == sessionId && banner.key == key) _banner = null;
   }
 
   void _onSessionGone(HostRef host, String sessionId) {
-    _cancelPhonePrompt(host: host, sessionId: sessionId);
     _clearSessionNotifications(host, sessionId);
   }
 

@@ -116,15 +116,6 @@ class OverlayMachineTest {
         assertEquals(Visibility.SHOWN, m.decide(t0 + 3_600_000).visibility)
     }
 
-    @Test fun phoneTaskHidesButKeepsTheProcess() {
-        val m = ready()
-        m.onPush(push("working"), t0)
-        m.phoneTask = true
-        val d = m.decide(t0)
-        assertEquals("phone task", d.why)
-        assertTrue(d.ownService)
-    }
-
     @Test fun nothingWithoutPermissionPetOrSwitch() {
         for (setup in listOf<(OverlayMachine) -> Unit>(
             { it.enabled = false },

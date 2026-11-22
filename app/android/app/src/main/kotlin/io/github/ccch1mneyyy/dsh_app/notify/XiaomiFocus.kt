@@ -8,7 +8,7 @@ import android.os.Build
 import android.os.Bundle
 import android.os.SystemClock
 import android.provider.Settings
-import io.github.ccch1mneyyy.dsh_app.phone.Json
+import io.github.ccch1mneyyy.dsh_app.util.Json
 
 /**
  * HyperOS 焦点通知 / 超级岛: the live activity's notification with a `miui.focus.param` template

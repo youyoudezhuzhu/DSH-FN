@@ -24,10 +24,10 @@ The pet, size and Quiet mode apply both in and outside the app.
 ## Show outside the app (Android)
 
 1. On the pet page, turn on **Show outside the app** (off by default).
-2. Allow "Display over other apps" when asked. If phone control's accessibility service is on, no extra permission is needed. Without permission, the switch turns itself off and shows **Not allowed**.
+2. Allow "Display over other apps" when asked. Without permission, the switch turns itself off and shows **Not allowed**.
 3. Under **When to show**, choose **When active** (default) or **Always**. When active: shows while a reply is running, a bubble is up, or there was activity in the last 5 minutes.
 
-The floating pet hides while the app is in the foreground and during phone control tasks.
+The floating pet hides while the app is in the foreground.
 
 Floating pet: tap to play with it, tap twice to open the chat that needs you most (approvals and questions first); drag it and it snaps to the edge and stays there; drag it onto the × or touch and hold and choose **Hide for today** to hide it for the day. Tap **Restore** on the pet page to bring it back.
 
@@ -37,17 +37,9 @@ While she is in the floating window, one tap plays with her: her head, face and 
 
 On Android 13 and later, if the switch still won't turn on after visiting system settings, **Switch disabled** appears on the pet page. Tap it for brand-specific steps to **Allow restricted settings**.
 
-## Pet picture in picture on iPhone
-
-Under [Phone control settings](dshgo://open/phone), pet picture in picture is optional and off by default; phone control does not require PiP or a selected pet. When enabled, iOS displays its standard PiP window and may still suspend background work. The window currently supports the pixel pet only; the Companion room's WebView character is available inside the app, not in PiP. The Android overlay permission, action wheel and screenshot question below do not apply on iPhone.
-
-## Action wheel and screenshot questions (Android)
+## Action wheel (Android)
 
 Touch and hold the floating pet. A fan of round buttons opens toward the inside of the screen, each with its name on the outer side. Keep your finger down and slide toward an action: it grows and its name is highlighted; release to choose it. Slide back onto the pet or outside the fan before releasing to cancel. If you release without sliding, the fan stays open: tap an action, or tap anywhere else to close it. The fan mirrors at the opposite screen edge; tapping and ordinary dragging are unchanged. Small screens or large fonts use a scrollable list when the fan will not fit; release without sliding, then scroll and tap.
-
-Choose **Screenshot & ask DSH-Go** to hide the pet and wheel, capture the current screen and automatically return to the app with the image as a pending attachment in a new chat. Type your question, then tap Send. Nothing is sent to AI automatically, and the previous conversation's draft is not overwritten. Existing text and attachments in the new-chat draft are kept; attachment limits are reported if the image cannot be added.
-
-Capture requires Android 11 or later and phone control's accessibility service to be enabled. Overlay permission alone is not enough. Pages protected against screenshots are not bypassed. The image uses only the app's private temporary cache, which is removed once read into the draft; it is not saved to the gallery. If a phone blocks opening the app from the background, tap the notification to continue.
 
 ## Quick ask, bubble decisions and voice (Android floating window)
 
@@ -69,7 +61,7 @@ What you can do:
 - Move the phone: tilt it to one side and she drifts that way with the water, tips over a little, then finds her balance. Shake it hard a few times and she gets dizzy and lets out a stream of bubbles. None of this happens when the phone has reduced motion turned on, and shaking does nothing on phones without a motion sensor.
 - Talk to her: type or use voice in the bar at the bottom. Choose how in **How she talks** in the menu at the top right:
   - **Light**: chat only. The phone uses the DeepSeek API key you saved in Settings to talk to the model directly, with no engine and no host. The chat stays on this phone, and **Start over** deletes it. Not available when you signed in with a DeepSeek account and saved no key.
-  - **Full**: uses DSH on the current host, in its own conversation that stays out of the chat list. **View chat history** in the menu opens it, and **Start over** begins a new conversation while the old record stays on the host. She can use the host's tools, and the phone too when phone control is on; anything that acts asks you first, and only a tap on the screen counts as yes.
+  - **Full**: uses DSH on the current host, in its own conversation that stays out of the chat list. **View chat history** in the menu opens it, and **Start over** begins a new conversation while the old record stays on the host. She can use the host's tools.
   - Until you choose, she uses Full while a host is connected and Light otherwise.
 - Zoom: pinch to zoom and move.
 - Her corner: there's a snack in the shell at the bottom left, a bubble floating on the right, and a seaweed cushion behind her. Tap the shell to give her a snack, the bubble to play, and the cushion to let her rest for a while. What she's doing shows under her name.

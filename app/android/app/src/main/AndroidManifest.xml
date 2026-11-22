@@ -10,7 +10,6 @@
     <!-- The live activity (notify/LiveActivity.kt): Android 16 QPR1+ promotes it to a Live Update.
          Normal, granted at install; older systems skip a permission they don't define. -->
     <uses-permission android:name="android.permission.POST_PROMOTED_NOTIFICATIONS" />
-    <uses-permission android:name="android.permission.WRITE_SECURE_SETTINGS" tools:ignore="ProtectedPermissions" />
     <!-- Composer voice input (voice/VoicePlugin.kt), asked for on the first tap of the mic. -->
     <uses-permission android:name="android.permission.RECORD_AUDIO" />
     <!-- Remote 扫码配对电脑 (ui/remote/pairing_page.dart, mobile_scanner), asked for when the
@@ -20,8 +19,6 @@
     <!-- TODO(targetSdk >= 30): package visibility hides recognition services from
          SpeechRecognizer.isRecognitionAvailable unless declared; add to <queries>:
          <intent><action android:name="android.speech.RecognitionService" /></intent> -->
-    <!-- Phone control `intent kind=alarm/timer` (normal permission; some clock apps require it). -->
-    <uses-permission android:name="com.android.alarm.permission.SET_ALARM" />
     <!-- Optional shared-storage access for saving chat deliverables and opening user files. -->
     <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" />
     <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" />
@@ -29,7 +26,8 @@
         android:name="android.permission.MANAGE_EXTERNAL_STORAGE"
         tools:ignore="ScopedStorage" />
 
-    <!-- 不打扰模式 (optional, default off): Shizuku provides the shell-uid channel. -->
+    <!-- In-app self-update (update/privileged/): the one-use Shizuku UserService that installs the
+         downloaded APK. Nothing else uses Shizuku: agent phone control is gone. -->
     <uses-permission android:name="moe.shizuku.manager.permission.API_V23" />
 
     <!-- App 外悬浮窗 (pet/PetOverlay.kt): the floating pet over other apps, off until the person turns it on. -->
@@ -209,27 +207,6 @@
             android:taskAffinity=""
             android:theme="@android:style/Theme.NoDisplay" />
 
-        <!-- The privileged gate starts only this inert receiver. Ordinary apps cannot launch it. -->
-        <activity
-            android:name=".phone.background.BackgroundProbeActivity"
-            android:exported="true"
-            android:permission="android.permission.INJECT_EVENTS"
-            android:process=":input_probe"
-            android:launchMode="standard"
-            android:taskAffinity=""
-            android:excludeFromRecents="true"
-            android:configChanges="orientation|screenSize|smallestScreenSize|screenLayout|density|uiMode"
-            android:theme="@android:style/Theme.Material.NoActionBar" />
-
-        <!-- Local self-check only: App UID starts this fixed inert target on its leased display. -->
-        <activity
-            android:name=".phone.selfcheck.PhoneSelfCheckTargetActivity"
-            android:exported="false"
-            android:launchMode="standard"
-            android:taskAffinity="${applicationId}.phone.selfcheck"
-            android:excludeFromRecents="true"
-            android:theme="@android:style/Theme.Material.Light.NoActionBar" />
-
         <!-- Quick Settings tile 「新对话」 (tile/NewChatTileService.kt). -->
         <service
             android:name=".tile.NewChatTileService"
@@ -253,21 +230,7 @@
                 android:value="Shows the user's floating assistant pet while their remote agent session runs" />
         </service>
 
-        <!-- 手机操控: reads and drives the main screen, owns the status bar / confirm overlay (phone/a11y). -->
-        <service
-            android:name=".phone.a11y.PhoneA11yService"
-            android:label="@string/phone_a11y_label"
-            android:permission="android.permission.BIND_ACCESSIBILITY_SERVICE"
-            android:exported="true">
-            <intent-filter>
-                <action android:name="android.accessibilityservice.AccessibilityService" />
-            </intent-filter>
-            <meta-data
-                android:name="android.accessibilityservice"
-                android:resource="@xml/phone_accessibility_service" />
-        </service>
-
-        <!-- 不打扰模式: Shizuku binder provider (shell-uid channel). -->
+        <!-- In-app self-update: Shizuku binder provider for the one-use install UserService. -->
         <provider
             android:name="rikka.shizuku.ShizukuProvider"
             android:authorities="${applicationId}.shizuku"
@@ -275,15 +238,6 @@
             android:enabled="true"
             android:exported="true"
             android:permission="android.permission.INTERACT_ACROSS_USERS_FULL" />
-
-        <!-- 不打扰模式: self-ADB wireless-debugging pairing code, typed in the notification. -->
-        <receiver
-            android:name=".phone.background.AdbPairingNotification$Receiver"
-            android:exported="false">
-            <intent-filter>
-                <action android:name="io.github.ccch1mneyyy.dsh_app.PHONE_ADB_PAIR_CODE" />
-            </intent-filter>
-        </receiver>
 
         <!-- 伙伴小屋 on the home screen (companion/CompanionWidget.kt). -->
         <receiver
@@ -299,20 +253,6 @@
         </receiver>
 
         <receiver android:name=".notify.NotifyActionReceiver" android:exported="false" />
-        <receiver android:name=".phone.a11y.A11yKeeper$Receiver" android:exported="false">
-            <intent-filter>
-                <action android:name="android.intent.action.MY_PACKAGE_REPLACED" />
-            </intent-filter>
-        </receiver>
-
-        <!-- Explicit per-channel keep only; no periodic job or foreground service. -->
-        <receiver android:name=".phone.background.PrivilegedKeepJob$Receiver" android:exported="false">
-            <intent-filter>
-                <action android:name="android.intent.action.BOOT_COMPLETED" />
-                <action android:name="android.intent.action.MY_PACKAGE_REPLACED" />
-            </intent-filter>
-        </receiver>
-        <service android:name=".phone.background.PrivilegedKeepJob" android:permission="android.permission.BIND_JOB_SERVICE" android:exported="false" />
 
         <!-- Chat artifacts: hands one file at a time to the app that opens it (files/FilesPlugin.kt). -->
         <provider

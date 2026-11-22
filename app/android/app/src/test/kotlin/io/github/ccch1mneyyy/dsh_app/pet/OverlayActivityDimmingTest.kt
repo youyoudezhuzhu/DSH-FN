@@ -83,15 +83,11 @@ class OverlayActivityDimmingTest {
         assertEquals(Visibility.PAUSED, machine.decide(t0 + 90_000).visibility)
     }
 
-    @Test fun activeDoesNotOverridePhoneTaskScreenOffForegroundOrSnooze() {
+    @Test fun activeDoesNotOverrideScreenOffForegroundOrSnooze() {
         val machine = ready()
         machine.onPush(push(true), t0)
         machine.decide(t0)
         val later = t0 + 90_000
-        machine.phoneTask = true
-        assertEquals("phone task", machine.decide(later).why)
-        assertEquals(Visibility.HIDDEN, machine.decide(later).visibility)
-        machine.phoneTask = false
         machine.interactive = false
         assertEquals(Visibility.PAUSED, machine.decide(later).visibility)
         machine.interactive = true

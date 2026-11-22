@@ -16,7 +16,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import '../chat/support/composer_fakes.dart' show FakeVoiceBridge;
 import '../chat/support/harness.dart';
-import '../phone/support.dart' show FixedActiveHost;
+import '../support/fixed_active_host.dart';
 
 void main() {
   setUpAll(loadTestFonts);

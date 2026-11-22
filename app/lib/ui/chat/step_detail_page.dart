@@ -132,10 +132,6 @@ class _ToolStep extends StatelessWidget {
     final tool = view.item;
     final title = span.kind == TraceKind.question ? l10n.activityStepQuestion : view.verb;
     final status = switch (tool.status) {
-      _ when view.phoneResult != null => (
-        view.phoneResult!.word,
-        view.phoneResult!.isFault ? dsh.danger : dsh.textTertiary,
-      ),
       ToolStatus.succeeded => (l10n.activityStepSuccess, dsh.success),
       ToolStatus.failed when view.sandboxBlocked => (l10n.activityStepNeedsPermission, dsh.textTertiary),
       ToolStatus.failed => (l10n.commonFailed, dsh.danger),
@@ -255,14 +251,12 @@ class _ToolStep extends StatelessWidget {
     }
     final result = tool.resultText.trimRight();
     if (result.isNotEmpty) {
-      // A phone tool's reported outcome that isn't a fault (HarmonyOS) isn't an error.
-      final fault = view.phoneResult?.isFault ?? true;
-      final title = tool.status == ToolStatus.failed && fault
+      final title = tool.status == ToolStatus.failed
           ? l10n.activityStepError
           : view.isTerminal
           ? l10n.activityOutput
           : l10n.activityStepResult;
-      final color = tool.status == ToolStatus.failed && !view.sandboxBlocked && fault
+      final color = tool.status == ToolStatus.failed && !view.sandboxBlocked
           ? DshColors.of(context).danger
           : null;
       out.add(

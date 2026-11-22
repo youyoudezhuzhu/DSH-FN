@@ -36,8 +36,8 @@ import io.github.ccch1mneyyy.dsh_app.notify.LiveActivity
  * - `voiceFallback {text}` → `{text}` after foreground offline recording, then return to the overlay.
  * No answer (no handler yet, the engine going away) reads as null: 问一句 then hands its text to the app.
  *
- * Status: `{enabled, alwaysShow, permission: accessibility|granted|blocked|denied, canDraw,
- * accessibility, snoozed, showing, sdk, manufacturer}`.
+ * Status: `{enabled, alwaysShow, permission: granted|blocked|denied, canDraw, snoozed, showing,
+ * sdk, manufacturer}`.
  */
 class PetOverlayPlugin : FlutterPlugin, ActivityAware {
     private lateinit var context: Context

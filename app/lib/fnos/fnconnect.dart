@@ -6,8 +6,25 @@ library;
 /// 飞牛 fnconnect 的域名后缀：ID `mynas` → `mynas.fnos.net`。
 const fnConnectDomainSuffix = '.fnos.net';
 
-/// DSH 在飞牛统一网关下的默认挂载路径。
+/// DSH 在飞牛统一网关下的默认挂载路径（应用中心 / fpk 安装的 DSH）。
 const defaultDshGatewayPath = '/app/deepseek-harness/fngateway';
+
+/// 常见的 DSH 网关/反代路径示例，给「高级」设置当提示用。
+///
+/// 不同 DSH 安装方式暴露的位置不同：
+/// * 应用中心（fpk）安装：飞牛统一网关 `fngateway` 反代，默认
+///   `/app/deepseek-harness/fngateway`；
+/// * 手动在飞牛「反向代理」里指向 DSH 自带端口：路径就是你自己写的，
+///   例如 `/dsh`、`/deepseek`；
+/// * 反代到应用根路径：`/app/deepseek-harness`；
+/// * 直接端口（fnconnect 允许时）：把完整地址 `https://<id>.fnos.net:<port>/`
+///   填在 ID 框里即可，路径留空。
+const commonDshGatewayPaths = [
+  defaultDshGatewayPath,
+  '/app/deepseek-harness',
+  '/dsh',
+  '/deepseek',
+];
 
 /// 只接受 `https`：飞牛会话 Cookie 是凭据，不能走明文。
 const _fnConnectScheme = 'https';
@@ -59,8 +76,31 @@ class FnConnectTarget {
   /// 首次登录要打开的页面：飞牛登录入口就在源上。
   Uri get loginUri => origin;
 
+  /// DSH 网关路径（`dshBaseUri.path`），可在「高级」里改。
+  String get gatewayPath => dshBaseUri.path;
+
+  /// 同一台 NAS，换成另一个网关路径；非法路径返回 null。
+  FnConnectTarget? withGatewayPath(String path) {
+    final normalized = normalizeDshGatewayPath(path);
+    if (normalized == null) return null;
+    return parseFnConnectInput(fnconnectId, gatewayPath: normalized);
+  }
+
   @override
   String toString() => 'FnConnectTarget($fnconnectId → $dshBaseUri)';
+}
+
+/// 规范化用户填的网关路径：空 / null 表示用 [defaultDshGatewayPath]；
+/// 补前导 `/`、去掉末尾 `/`。非法路径返回 null。
+String? normalizeDshGatewayPath(String? raw) {
+  final text = (raw ?? '').trim();
+  if (text.isEmpty) return defaultDshGatewayPath;
+  var path = text.startsWith('/') ? text : '/$text';
+  while (path.length > 1 && path.endsWith('/')) {
+    path = path.substring(0, path.length - 1);
+  }
+  if (!_pathCharacters.hasMatch(path)) return null;
+  return path;
 }
 
 /// 把用户输入解析成 [FnConnectTarget]，非法输入返回 null。
@@ -71,13 +111,18 @@ class FnConnectTarget {
 /// * `https://mynas.fnos.net`
 /// * 带路径的完整 URL，如
 ///   `https://mynas.fnos.net/app/deepseek-harness/fngateway`；
-///   此时用它的源加该路径（无路径或只有 `/` 时用 [defaultDshGatewayPath]）。
+///   此时用它的源加该路径。
+///
+/// 输入里没有路径时用 [gatewayPath]（见 [normalizeDshGatewayPath]），没有给就用
+/// [defaultDshGatewayPath]。
 ///
 /// 拒绝：空串、含空白（调用方如需容错请先 trim）、非 `https`、
 /// 不是 `<id>.fnos.net` 的主机、非法路径字符。
 ///
 /// query 和 fragment 会被忽略：网关地址只由源和路径决定。
-FnConnectTarget? parseFnConnectInput(String raw) {
+FnConnectTarget? parseFnConnectInput(String raw, {String? gatewayPath}) {
+  final customPath = gatewayPath == null ? null : normalizeDshGatewayPath(gatewayPath);
+  if (gatewayPath != null && customPath == null) return null;
   if (raw.isEmpty || _whitespace.hasMatch(raw) || _illegalInputCharacters.hasMatch(raw)) return null;
 
   var text = raw;
@@ -112,7 +157,7 @@ FnConnectTarget? parseFnConnectInput(String raw) {
 
   var path = uri.path;
   if (path.isEmpty || path == '/') {
-    path = defaultDshGatewayPath;
+    path = customPath ?? defaultDshGatewayPath;
   } else {
     while (path.length > 1 && path.endsWith('/')) {
       path = path.substring(0, path.length - 1);

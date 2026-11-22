@@ -28,18 +28,8 @@ import kotlin.concurrent.thread
  *   system exit metadata, with per-source availability. No exception bodies or exit traces.
  * - `recordAppError` / `recordVoiceStage` validate fixed fields and acknowledge after
  *   background durable storage; invalid_evidence / evidence_unavailable do not affect app handlers.
- *
- * System IME capture returns only allowlisted events; raw lines are confined to the
- * privileged parser and are never returned, persisted or sent to the engine log.
  */
-class DiagnosticsPlugin : FlutterPlugin, io.flutter.embedding.engine.plugins.activity.ActivityAware, MethodChannel.MethodCallHandler {
-
-    private val systemIme = SystemImePrompt()
-
-    override fun onAttachedToActivity(binding: io.flutter.embedding.engine.plugins.activity.ActivityPluginBinding) = systemIme.attach(binding.activity)
-    override fun onReattachedToActivityForConfigChanges(binding: io.flutter.embedding.engine.plugins.activity.ActivityPluginBinding) = systemIme.attach(binding.activity)
-    override fun onDetachedFromActivityForConfigChanges() = systemIme.detach()
-    override fun onDetachedFromActivity() = systemIme.detach()
+class DiagnosticsPlugin : FlutterPlugin, MethodChannel.MethodCallHandler {
 
     private var methods: MethodChannel? = null
     private lateinit var context: Context
@@ -51,7 +41,6 @@ class DiagnosticsPlugin : FlutterPlugin, io.flutter.embedding.engine.plugins.act
     }
 
     override fun onDetachedFromEngine(binding: FlutterPlugin.FlutterPluginBinding) {
-        systemIme.detach()
         methods?.setMethodCallHandler(null)
         methods = null
     }
@@ -61,8 +50,6 @@ class DiagnosticsPlugin : FlutterPlugin, io.flutter.embedding.engine.plugins.act
             "info" -> background(result) { mapOf("app" to app(), "device" to device(), "voice" to VoiceDiagnostics.snapshot(context), "evidence" to DiagnosticsEvidence.snapshot(context)) }
             "recordAppError" -> DiagnosticsEvidence.record(context, "appErrors", call.arguments, result)
             "recordVoiceStage" -> DiagnosticsEvidence.record(context, "voiceStages", call.arguments, result)
-            "collectSystemIme" -> systemIme.collect(result)
-            "cancelSystemIme" -> { systemIme.cancel(); result.success(null) }
             "engineLog" -> {
                 val maxBytes = (call.argument<Int>("maxBytes") ?: DEFAULT_LOG_BYTES).coerceIn(1024, MAX_LOG_BYTES)
                 background(result) { engineLog(maxBytes) }

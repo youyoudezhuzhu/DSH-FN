@@ -11,7 +11,7 @@ const replayViewerPage = r'''<!doctype html>
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="referrer" content="no-referrer">
 <meta name="robots" content="noindex">
-<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-SQx9DjHcIv7KDXzxussj4x+ZyUAaCegGkYXT1lOZc8A='; style-src 'unsafe-inline'; img-src data: blob:; connect-src 'none'; base-uri 'none'; form-action 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-O+sHTTfAU5Qddye5GVL5JM6YPY1+D/rE0uVERlwnieY='; style-src 'unsafe-inline'; img-src data: blob:; connect-src 'none'; base-uri 'none'; form-action 'none'">
 <meta name="color-scheme" content="light dark">
 <title>__DSHGO_TITLE__</title>
 <style>/* dsh-go conversation viewer (viewer.js). Shared by the landing page and the
@@ -1217,7 +1217,7 @@ const replayViewerPage = r'''<!doctype html>
     }
     if (opts.download !== false) {
       var dl = el('a', 'dv-btn ' + (opts.appLink ? 'dv-secondary' : 'dv-primary'), tr('download'));
-      dl.href = opts.download || 'https://github.com/ccch1mneyyy/dsh-go/releases/latest';
+      dl.href = opts.download || 'https://github.com/youyoudezhuzhu/DSH-FN/releases/latest';
       dl.rel = 'noopener';
       dl.target = '_blank';
       actions.appendChild(dl);
@@ -1849,7 +1849,7 @@ const replayViewerPage = r'''<!doctype html>
       opener(host);
     } catch (e) {
       var dl = el('a', 'dv-btn dv-secondary', tr('download'));
-      dl.href = 'https://github.com/ccch1mneyyy/dsh-go/releases/latest';
+      dl.href = 'https://github.com/youyoudezhuzhu/DSH-FN/releases/latest';
       dl.rel = 'noopener';
       card(host, errorText(e), null, dl);
     }
@@ -1891,4 +1891,4 @@ DshgoViewer.boot();
 ''';
 
 /// What the page was built from (test/share_code/replay_viewer_sync_test.dart).
-const replayViewerSourceHash = '676f55f8a99ddb882587d2a928116e5ee77900c9c399b08085815875c23b881b';
+const replayViewerSourceHash = '362be1f590bee3777f916e18605fbe497c8421f61cd88e38ac3a263e8a407911';

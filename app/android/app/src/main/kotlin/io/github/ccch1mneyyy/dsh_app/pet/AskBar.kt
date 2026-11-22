@@ -127,7 +127,7 @@ internal class AskBarView(context: Context, private val listener: Listener) : Li
         setOnClickListener { listener.onSwitch() }
     }
     val input: EditText = object : EditText(context) {
-        // Back with the keyboard up closes the bar at once, as phone control's input does.
+        // Back with the keyboard up closes the bar at once.
         override fun onKeyPreIme(keyCode: Int, event: KeyEvent?): Boolean {
             if (keyCode == KeyEvent.KEYCODE_BACK && event?.action == KeyEvent.ACTION_UP) {
                 listener.onClose()

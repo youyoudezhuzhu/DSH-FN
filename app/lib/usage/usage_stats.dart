@@ -16,12 +16,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../l10n/l10n.dart';
-import '../phone/phone_channel.dart';
 import '../runtime/runtime_bridge.dart';
 import '../runtime/runtime_state.dart';
 import '../state/android_features.dart';
 import '../state/connection_state.dart';
-import '../state/phone_state.dart' show phoneChannelProvider;
 import '../state/update_state.dart';
 import 'usage_ledger.dart';
 import 'usage_net.dart';
@@ -72,11 +70,6 @@ final usageResumesProvider = Provider<VoidCallback Function(VoidCallback onResum
   (ref) =>
       (onResume) => AppLifecycleListener(onResume: onResume).dispose,
 );
-
-/// A phone control task began between [before] and [now]: a new number, or
-/// active again.
-bool phoneTaskStarted(PhoneTaskStatus before, PhoneTaskStatus now) =>
-    now.active && (!before.active || (now.id != null && now.id != before.id));
 
 /// The on-device engine's launch while it runs (`direct`, `proot`).
 String? _engineMode(LocalRuntimeState s) =>
@@ -173,8 +166,7 @@ class UsageStatsController extends Notifier<UsageStatsState> {
   }
 
   /// Release builds: today counts when the app comes to the front, and the
-  /// days before go out; the engine's launch and phone control tasks are
-  /// noted as they happen.
+  /// days before go out; the engine's launch is noted as it happens.
   void _watch() {
     ref.onDispose(ref.read(usageResumesProvider)(() => unawaited(foreground())));
     // A cold start comes up in front.
@@ -245,45 +237,6 @@ class UsageStatsController extends Notifier<UsageStatsState> {
         }
       });
     }
-    final channel = ref.read(phoneChannelProvider);
-    StreamSubscription<PhoneStatus>? sub;
-    var disposed = false;
-    ref.onDispose(() {
-      disposed = true;
-      unawaited(sub?.cancel());
-    });
-    unawaited(() async {
-      try {
-        final first = await channel.status();
-        // Listening with no native side reports an error: only once it answered.
-        if (disposed || !first.ready) return;
-        var last = first.task;
-        (String, int)? owner;
-        void Function(UsageOutcome, {UsageOperation? actual})? task;
-        sub = channel.statusChanges.listen((s) {
-          final next = s.task;
-          if (owner != null && owner == (next.endedRunId, next.endedGeneration)) {
-            task?.call(switch (next) {
-              PhoneTaskStatus(cleanupFailed: true) => UsageOutcome.failed,
-              PhoneTaskStatus(stopped: true) => UsageOutcome.cancelled,
-              PhoneTaskStatus(completion: 'completed') => UsageOutcome.ready,
-              _ => UsageOutcome.unknown,
-            });
-            task = null;
-            owner = null;
-          }
-          if (phoneTaskStarted(last, next)) {
-            count(UsageCount.phone);
-            if ((next.runId, next.generation) case (final run?, final generation?)) {
-              task?.call(UsageOutcome.unknown);
-              task = beginOperation(UsageOperation.phoneTask);
-              owner = (run, generation);
-            }
-          }
-          last = next;
-        }, onError: (_) {});
-      } catch (_) {}
-    }());
   }
 
   /// One more [c] today.

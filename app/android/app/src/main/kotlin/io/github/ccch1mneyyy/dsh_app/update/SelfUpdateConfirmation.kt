@@ -7,7 +7,7 @@ import io.github.ccch1mneyyy.dsh_app.i18n.AppStrings
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.TimeUnit
 
-/** A foreground, one-attempt native confirmation; never inherits phone-task waivers. */
+/** A foreground, one-attempt native confirmation; never inherits any automation waiver. */
 internal class SelfUpdateConfirmation(
     private val main: Handler,
     private val activity: () -> Activity?,

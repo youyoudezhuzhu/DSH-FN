@@ -8,10 +8,8 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 
-import 'package:dsh_app/phone/phone_channel.dart';
 import 'package:dsh_app/runtime/runtime_bridge.dart';
 import 'package:dsh_app/runtime/runtime_state.dart';
-import 'package:dsh_app/state/phone_state.dart' show phoneChannelProvider;
 import 'package:dsh_app/usage/usage_ledger.dart';
 import 'package:dsh_app/usage/usage_net.dart';
 import 'package:dsh_app/usage/usage_stats.dart';
@@ -28,11 +26,6 @@ class _Received {
   final String path;
   final HttpHeaders headers;
   final Map<String, Object?> body;
-}
-
-class _NoPhone extends PhoneChannel {
-  @override
-  Future<PhoneStatus> status() async => const PhoneStatus.notReady();
 }
 
 void main() {
@@ -96,7 +89,6 @@ void main() {
             ),
           ),
         ),
-        phoneChannelProvider.overrideWithValue(_NoPhone()),
       ],
     );
     addTearDown(container.dispose);
@@ -111,7 +103,6 @@ void main() {
     usage
       ..count(UsageCount.turns)
       ..count(UsageCount.turns)
-      ..count(UsageCount.phone)
       ..plugins(1);
     now = DateTime(2026, 10, 29, 9);
     usage.count(UsageCount.share);
@@ -153,7 +144,7 @@ void main() {
       'maker': 'vivo',
       'lang': 'en',
       'engine': 'proot',
-      'counts': {'turns': 2, 'voice': 0, 'phone': 1, 'share': 0, 'gen': 0, 'plugins': 1},
+      'counts': {'turns': 2, 'voice': 0, 'phone': 0, 'share': 0, 'gen': 0, 'plugins': 1},
     });
     expect(received[2].body['counts'], {'turns': 0, 'voice': 0, 'phone': 0, 'share': 1, 'gen': 0, 'plugins': 1});
     // One install id for all of it, 128 bits without padding.

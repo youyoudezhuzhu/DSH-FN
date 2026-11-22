@@ -21,7 +21,7 @@ ReleaseInfo _release({String? page}) => parseUpdateManifest({
   'notes': '- 新东西',
   'page': ?page,
   'assets': {
-    'arm64': {'name': 'dsh-go-1.2.0-arm64.apk', 'url': 'https://go.dshtui.com/dsh-go-1.2.0-arm64.apk', 'size': 1},
+    'arm64': {'name': 'DSH-FN-1.2.0-arm64.apk', 'url': 'https://go.dshtui.com/DSH-FN-1.2.0-arm64.apk', 'size': 1},
   },
 }, base: Uri.parse('https://go.dshtui.com/'));
 

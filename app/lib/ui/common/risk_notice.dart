@@ -80,26 +80,6 @@ class RiskNotice {
 /// Every notice in one place, so the ids stay stable and the copy is read
 /// together.
 abstract final class RiskNotices {
-  /// 手机操控 › 确认方式 › 始终免确认.
-  static RiskNotice get phoneConfirmAlways => RiskNotice(
-    id: 'phone.confirm-always',
-    level: RiskLevel.high,
-    title: appL10n.phoneConfirmAlwaysTitle,
-    body: appL10n.phoneConfirmAlwaysBody,
-    action: appL10n.riskConfirmAlwaysAction,
-    ask: AskAiTopic.phoneAlways,
-  );
-
-  /// 应用名单: 不碰 → 照常 ([fromDeny]) or 每一步都确认 → 照常.
-  static RiskNotice appRule(String app, {required bool fromDeny}) => RiskNotice(
-    id: fromDeny ? 'phone.app-rule.allow' : 'phone.app-rule.skip-steps',
-    level: RiskLevel.high,
-    title: fromDeny ? appL10n.phoneAppRulesLoosenTitle(app) : appL10n.phoneAppRulesSkipStepsTitle(app),
-    body: fromDeny ? appL10n.phoneAppRulesLoosenBody : appL10n.phoneAppRulesSkipStepsBody,
-    action: appL10n.phoneAppRulesAcceptRisk,
-    ask: AskAiTopic.appRules,
-  );
-
   /// 设置 › 自动执行命令, and the 完全权限 preset.
   static RiskNotice get fullAccess => RiskNotice(
     id: 'permission.full-access',
@@ -119,26 +99,6 @@ abstract final class RiskNotices {
     action: appL10n.riskAutoReviewAction,
   );
 
-  /// 设置 › 访问手机文件.
-  static RiskNotice get phoneFiles => RiskNotice(
-    id: 'settings.phone-files',
-    level: RiskLevel.high,
-    title: appL10n.hubSettingsStorageTitle,
-    body: appL10n.hubSettingsStorageBody,
-    action: appL10n.hubSettingsStorageAllow,
-    ask: AskAiTopic.phoneFiles,
-  );
-
-  /// The same, picked on first run: no engine runs yet, nothing restarts.
-  static RiskNotice get phoneFilesFirstRun => RiskNotice(
-    id: 'settings.phone-files',
-    level: RiskLevel.high,
-    title: appL10n.hubSettingsStorageTitle,
-    body: appL10n.accessFilesRiskBody,
-    action: appL10n.hubSettingsStorageAllow,
-    ask: AskAiTopic.phoneFiles,
-  );
-
   /// The approval card's 本对话都允许: this conversation only, until restart.
   static RiskNotice get allowForChat => RiskNotice(
     id: 'chat.allow-for-chat',
@@ -147,16 +107,6 @@ abstract final class RiskNotices {
     body: appL10n.riskAllowForChatBody,
     action: appL10n.riskAllowForChatAction,
     ask: AskAiTopic.allowForChat,
-  );
-
-  /// 不打扰模式 › Root and 自动恢复无障碍's 申请 root 授权: the root manager's
-  /// own prompt comes next.
-  static RiskNotice get rootChannel => RiskNotice(
-    id: 'phone.root',
-    level: RiskLevel.medium,
-    title: appL10n.phonePrivilegedRootRiskTitle,
-    body: appL10n.phonePrivilegedRootRiskBody,
-    action: appL10n.phonePrivilegedRootPrepare,
   );
 
   /// 宠物 › App 外显示, before the trip to 「显示在其他应用上层」.

@@ -1,8 +1,6 @@
 // Where alerts go (system notification, banner, nothing), what gets cleared,
 // and how a tap opens the conversation (lib/state/notify_state.dart).
 
-import 'dart:async';
-
 import 'package:dsh_app/state/connection_state.dart';
 import 'package:dsh_app/state/hosts_state.dart';
 import 'package:dsh_app/state/notify_state.dart';
@@ -12,7 +10,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-import '../phone/support.dart' show FakePhoneNative, phoneStatus;
 import 'support.dart';
 
 class _Local extends FnosConnectionController {
@@ -395,28 +392,6 @@ void main() {
       expect(container.read(chatAlertsProvider), isNull);
       await foreground(false);
       expect(channel.shown, isEmpty, reason: 'only pending requests are recovered');
-    });
-
-    test('background recovery keeps the local phone prompt ahead of system alerts', () async {
-      final reply = Completer<Map<String, Object?>>();
-      addTearDown(() {
-        if (!reply.isCompleted) reply.complete({'decision': 'stopped', 'presented': 'none'});
-      });
-      final native = FakePhoneNative(status: phoneStatus())
-        ..onPresentPrompt = ((_) => reply.future)
-        ..install();
-      make();
-      container.read(currentSessionProvider.notifier).select('s1');
-      await settle();
-      local.emit(approval('e1', 's1'));
-      await settle();
-      expect(native.callsOf('presentPrompt'), isEmpty);
-      expect(channel.shown, isEmpty);
-      await foreground(false);
-      expect(native.callsOf('presentPrompt'), hasLength(1));
-      expect(channel.shown, isEmpty, reason: 'no parallel system reminder for the local phone prompt');
-      reply.complete({'decision': 'stopped', 'presented': 'none'});
-      await settle();
     });
 
     test('C907 a same-client rename retains request history; a new client retires it', () async {

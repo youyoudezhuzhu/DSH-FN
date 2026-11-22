@@ -137,7 +137,7 @@ void main() {
                 const LinkHost(),
                 Padding(
                   padding: const EdgeInsets.all(16),
-                  child: ThinkingPill(reasoning: '先看看[打开手机操控](dshgo://open/phone)再决定。\n\n第二段。'),
+                  child: ThinkingPill(reasoning: '先看看[打开宠物](dshgo://open/pets)再决定。\n\n第二段。'),
                 ),
               ],
             ),
@@ -155,13 +155,13 @@ void main() {
     await pumpFrames(tester, 2);
     await _expand(tester);
 
-    await tester.tapAt(_labelCenter(tester, '打开手机操控'));
+    await tester.tapAt(_labelCenter(tester, '打开宠物'));
     await tester.pumpAndSettle();
-    expect(opened, ['phone']);
-    expect(find.text('page phone'), findsOneWidget);
+    expect(opened, ['pets']);
+    expect(find.text('page pets'), findsOneWidget);
 
     // 链接吞掉了这次点击:回到上面,思考正文还是展开的。
-    Navigator.of(tester.element(find.text('page phone'))).pop();
+    Navigator.of(tester.element(find.text('page pets'))).pop();
     await tester.pumpAndSettle();
     expect(_body, findsOneWidget);
     expect(_ticker, findsNothing);

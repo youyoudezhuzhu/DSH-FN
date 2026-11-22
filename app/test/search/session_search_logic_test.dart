@@ -653,18 +653,18 @@ void main() {
       final s3 = searchSession('s3', '日常杂谈 C', DateTime(2026, 10, 24));
       final corpus = <String, SessionSearchCorpusEntry>{
         // s1: single user message has both terms (tier 0)
-        's1': const SessionSearchCorpusEntry(userMessages: ['我想用 Shizuku 调用安卓 Shell 自动化命令']),
+        's1': const SessionSearchCorpusEntry(userMessages: ['我想用 Docker 调用安卓 Shell 自动化命令']),
         // s2: terms split across two user messages in the same session (tier 1)
-        's2': const SessionSearchCorpusEntry(userMessages: ['能不能接上 Shizuku', '再跑一条 Shell 命令']),
+        's2': const SessionSearchCorpusEntry(userMessages: ['能不能接上 Docker', '再跑一条 Shell 命令']),
         // s3: only the assistant preview has the terms (tier 2)
         's3': const SessionSearchCorpusEntry(
           userMessages: ['帮我看看怎么改'],
-          assistantPreviews: ['可以通过 Shizuku 执行 Shell 脚本。'],
+          assistantPreviews: ['可以通过 Docker 执行 Shell 脚本。'],
         ),
       };
-      final page = searchSessionCorpus('shizuku shell', [s3, s2, s1], corpus);
+      final page = searchSessionCorpus('docker shell', [s3, s2, s1], corpus);
       expect(page.items.map((h) => h.sessionId), ['s1', 's2', 's3']);
-      expect(page.items.first.snippet, contains('Shizuku'));
+      expect(page.items.first.snippet, contains('Docker'));
       expect(page.hasMore, isFalse);
     });
 

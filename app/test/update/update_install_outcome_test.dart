@@ -12,8 +12,8 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import 'support.dart';
 
-const _name = 'dsh-go-1.2.0-arm64.apk';
-const _url = 'https://github.com/ccch1mneyyy/dsh-go/releases/download/v1.2.0/$_name';
+const _name = 'DSH-FN-1.2.0-arm64.apk';
+const _url = 'https://github.com/youyoudezhuzhu/DSH-FN/releases/download/v1.2.0/$_name';
 final _bytes = utf8.encode('fixed host-only update test bytes');
 
 void main() {

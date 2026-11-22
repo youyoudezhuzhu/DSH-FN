@@ -23,7 +23,6 @@ import io.github.ccch1mneyyy.dsh_app.launch.LaunchScreen
 import io.github.ccch1mneyyy.dsh_app.launch.LaunchThemeSync
 import io.github.ccch1mneyyy.dsh_app.links.LinksPlugin
 import io.github.ccch1mneyyy.dsh_app.notify.NotifyPlugin
-import io.github.ccch1mneyyy.dsh_app.phone.PhonePlugin
 import io.github.ccch1mneyyy.dsh_app.share.SharePlugin
 import io.github.ccch1mneyyy.dsh_app.shortcuts.ShortcutsPlugin
 import io.github.ccch1mneyyy.dsh_app.text.CachedTextActions
@@ -47,7 +46,6 @@ class MainActivity : FlutterActivity() {
         val cache = FlutterEngineCache.getInstance()
         cache.get(ENGINE_ID)?.let { return it }
         return FlutterEngine(applicationContext).also { engine ->
-            engine.plugins.add(PhonePlugin())
             engine.plugins.add(NotifyPlugin())
             engine.plugins.add(FilesPlugin())
             engine.plugins.add(LinksPlugin())
@@ -124,7 +122,6 @@ class MainActivity : FlutterActivity() {
 
     override fun onResume() {
         super.onResume()
-        io.github.ccch1mneyyy.dsh_app.phone.background.BackgroundControl.get(applicationContext).restoreKeptChannel()
         inForeground = true
         // Another app may have been changed meanwhile.
         textActions?.forget()

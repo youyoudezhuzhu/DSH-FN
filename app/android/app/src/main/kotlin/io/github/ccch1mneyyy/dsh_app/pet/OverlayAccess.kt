@@ -1,19 +1,17 @@
 package io.github.ccch1mneyyy.dsh_app.pet
 
 /** Which window type hosts the pet. */
-enum class OverlayHost { ACCESSIBILITY, APPLICATION, NONE }
+enum class OverlayHost { APPLICATION, NONE }
 
 /**
  * What the settings show about permission (`permission` in the status map):
  *
- * - `accessibility`: the phone-control accessibility service is on; its overlay needs nothing else;
  * - `granted`: the overlay permission works (or nothing has failed yet with it reported on);
  * - `blocked`: the system reports the permission but adding the window failed — a vendor's own
  *   floating-window switch (vivo, some others) that `canDrawOverlays` doesn't see;
  * - `denied`: no permission, and no window could be added.
  */
 enum class OverlayPermission(val wire: String) {
-    ACCESSIBILITY("accessibility"),
     GRANTED("granted"),
     BLOCKED("blocked"),
     DENIED("denied"),
@@ -27,8 +25,7 @@ enum class OverlayPermission(val wire: String) {
 enum class AddResult { OK, FAILED }
 
 object OverlayAccess {
-    fun permission(a11yConnected: Boolean, canDraw: Boolean, lastAdd: AddResult?): OverlayPermission = when {
-        a11yConnected -> OverlayPermission.ACCESSIBILITY
+    fun permission(canDraw: Boolean, lastAdd: AddResult?): OverlayPermission = when {
         lastAdd == AddResult.OK -> OverlayPermission.GRANTED
         lastAdd == AddResult.FAILED -> if (canDraw) OverlayPermission.BLOCKED else OverlayPermission.DENIED
         canDraw -> OverlayPermission.GRANTED
@@ -36,17 +33,11 @@ object OverlayAccess {
     }
 
     /**
-     * The window type to try. Without the accessibility service an application overlay is tried
-     * until an attempt fails — also when `canDrawOverlays` says no (a vendor build that lies).
-     * During an accessibility failure's cooldown, fallback requires explicit overlay permission.
+     * The window type to try: an application overlay until an attempt fails — also when
+     * `canDrawOverlays` says no (a vendor build that lies).
      */
-    fun host(a11yConnected: Boolean, lastAdd: AddResult?, a11yFailed: Boolean = false, canDraw: Boolean = false): OverlayHost = when {
-        a11yConnected && !a11yFailed -> OverlayHost.ACCESSIBILITY
-        // A failed accessibility add does not grant permission to use an application overlay.
-        a11yFailed && !canDraw -> OverlayHost.NONE
-        lastAdd == AddResult.FAILED -> OverlayHost.NONE
-        else -> OverlayHost.APPLICATION
-    }
+    fun host(lastAdd: AddResult?): OverlayHost =
+        if (lastAdd == AddResult.FAILED) OverlayHost.NONE else OverlayHost.APPLICATION
 
     /**
      * Whether a failed attempt may be forgotten and the window tried again: when the reported
@@ -57,23 +48,4 @@ object OverlayAccess {
         lastAdd != AddResult.FAILED || canDrawChanged || (canDraw && now - failedAt >= RETRY_MS)
 
     const val RETRY_MS = 60_000L
-}
-
-/** Failed accessibility windows wait even when removal callbacks immediately evaluate again. */
-internal class AccessibilityOverlayRetry {
-    private var connection: Any? = null
-    private var failedAt: Long? = null
-
-    fun failed(service: Any, now: Long) {
-        connection = service
-        failedAt = now
-    }
-
-    fun remaining(service: Any?, now: Long): Long? {
-        if (connection !== service) {
-            connection = service
-            failedAt = null
-        }
-        return failedAt?.let { (OverlayAccess.RETRY_MS - (now - it)).takeIf { delay -> delay > 0 } }
-    }
 }

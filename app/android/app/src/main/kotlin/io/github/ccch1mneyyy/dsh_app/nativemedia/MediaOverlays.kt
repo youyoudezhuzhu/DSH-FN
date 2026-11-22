@@ -297,7 +297,7 @@ internal class MediaOverlays(private val onStop: () -> Unit, private val onCapti
         }
     }
 
-    /** The app's 雾蓝 surfaces (as phone/a11y/ControlOverlay.kt draws them). */
+    /** The app's 雾蓝 surfaces (app/lib/ui/theme/palette.dart). */
     internal class Palette(
         val top: Int, val bottom: Int, val stroke: Int, val ink: Int, val muted: Int,
         val field: Int, val ripple: Int, val danger: Int,

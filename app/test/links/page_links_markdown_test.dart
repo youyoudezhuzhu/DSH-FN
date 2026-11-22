@@ -56,11 +56,11 @@ void main() {
       tester.widget<GptMarkdown>(find.byType(GptMarkdown)).onLinkTap!(url, '');
 
   testWidgets('tapping a page link in a reply opens the page', (tester) async {
-    await pumpReply(tester, '在这里改：[打开手机操控](dshgo://open/phone)');
-    tapLink(tester, 'dshgo://open/phone');
+    await pumpReply(tester, '在这里改：[打开宠物](dshgo://open/pets)');
+    tapLink(tester, 'dshgo://open/pets');
     await tester.pumpAndSettle();
-    expect(opened, ['phone']);
-    expect(find.text('page phone'), findsOneWidget);
+    expect(opened, ['pets']);
+    expect(find.text('page pets'), findsOneWidget);
   });
 
   testWidgets('an unknown page shows one line and opens nothing', (tester) async {

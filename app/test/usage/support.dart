@@ -1,14 +1,12 @@
-// Fakes for usage statistics: the network, the phone control module, the
-// phone's facts, and the overrides that put them in place.
+// Fakes for usage statistics: the network, the phone's facts, and the
+// overrides that put them in place.
 
 import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 
-import 'package:dsh_app/phone/phone_channel.dart';
 import 'package:dsh_app/runtime/runtime_bridge.dart';
 import 'package:dsh_app/runtime/runtime_state.dart';
-import 'package:dsh_app/state/phone_state.dart' show phoneChannelProvider;
 import 'package:dsh_app/usage/usage_ledger.dart';
 import 'package:dsh_app/usage/usage_net.dart';
 import 'package:dsh_app/usage/usage_stats.dart';
@@ -38,23 +36,6 @@ class FakeUsageHttp implements UsageHttp {
   }
 }
 
-/// A phone control module that is there, with pushes the test sends.
-class FakePhone extends PhoneChannel {
-  final pushes = StreamController<PhoneStatus>.broadcast();
-
-  @override
-  Future<PhoneStatus> status() async => const PhoneStatus();
-
-  @override
-  Stream<PhoneStatus> get statusChanges => pushes.stream;
-}
-
-/// No phone control module (it never answered).
-class NoPhone extends PhoneChannel {
-  @override
-  Future<PhoneStatus> status() async => const PhoneStatus.notReady();
-}
-
 const testDevice = UsageDevice(app: '0.9.9', build: 10301000, sdk: 34, abi: 'arm64-v8a', maker: 'vivo');
 
 /// Everything usage statistics reach for, faked: [clock], [http], the
@@ -64,7 +45,6 @@ List<Override> usageOverrides({
   required UsageHttp http,
   required void Function(VoidCallback? onResume) onResumes,
   String? engine,
-  PhoneChannel? phone,
   UsageDevice device = testDevice,
   String lang = 'zh',
   LocalRuntimeState? runtime,
@@ -89,5 +69,4 @@ List<Override> usageOverrides({
           ),
     ),
   ),
-  phoneChannelProvider.overrideWithValue(phone ?? NoPhone()),
 ];

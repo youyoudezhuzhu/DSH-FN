@@ -11,7 +11,7 @@ import java.io.FileOutputStream
 import java.util.UUID
 import java.util.concurrent.TimeUnit
 
-/** Dedicated self-update lifecycle. It never enables PhoneControl or the general shell capability. */
+/** Dedicated self-update lifecycle. It never enables the agent-driven shell capability. */
 class PrivilegedSelfUpdater(context: Context) {
     private val context = context.applicationContext
     private val owner = Any()

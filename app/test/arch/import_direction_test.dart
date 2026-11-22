@@ -45,7 +45,6 @@ const _allowed = {
   'share_code/conversation_export.dart -> ui/chat/tool_view.dart',
   'share_code/conversation_redact.dart -> ui/chat/secret_mask.dart',
   'share_code/settings_sanitizer.dart -> ui/chat/secret_mask.dart',
-  'state/access_state.dart -> ui/chat/voice/voice_bridge.dart',
   'state/appearance_state.dart -> ui/theme/accent.dart',
   'state/bots_state.dart -> ui/chat/secret_mask.dart',
   'state/media_catalog.dart -> ui/chat/media/generate_header.dart',

@@ -5,18 +5,15 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../l10n/l10n.dart';
 import '../../state/account_state.dart';
-import '../../state/android_features.dart';
 import '../../state/ask_ai.dart' show askAiAvailableProvider;
 import '../../state/balance_state.dart';
 import '../../state/connection_state.dart';
 import '../../state/engine_settings_state.dart';
 import '../../state/features_state.dart';
 import '../../state/hosts_state.dart';
-import '../../state/phone_state.dart';
 import '../../state/plugins_state.dart';
 import '../../state/sessions_state.dart';
 import '../../state/settings_state.dart';
-import '../../state/system_actions_state.dart';
 import '../../state/ui_mode_state.dart';
 import '../../state/update_state.dart';
 import '../account/account_page.dart';
@@ -32,8 +29,6 @@ import '../features/feature_catalog.dart' show communityPage;
 import '../features/feature_format.dart' show permissionName;
 import '../features/permission_page.dart';
 import '../pets/pet_settings_page.dart';
-import '../phone/phone_control_screen.dart';
-import '../phone/system_actions_page.dart';
 import '../plugins/plugins_screen.dart';
 import '../plugins/seats/plugin_settings_tiles.dart';
 import '../plugins/seats/seat_probe.dart';
@@ -55,7 +50,6 @@ import 'personalization_page.dart';
 import 'privacy_page.dart';
 import 'search/settings_search_page.dart';
 import 'settings_widgets.dart';
-import 'system_access_page.dart';
 import 'voice_settings_page.dart';
 
 /// One hue per group on the hub: rows of a group share it.
@@ -85,8 +79,6 @@ class SettingsScreen extends ConsumerWidget {
     final settings = ref.watch(settingsProvider);
     final colors = DshColors.of(context);
     final notifier = ref.read(settingsProvider.notifier);
-    final android = ref.watch(androidSystemFeaturesProvider);
-    final ios = ref.watch(operatingSystemProvider) == 'ios';
     final uiMode = ref.watch(uiModeProvider.select((s) => s.mode));
     final host = ref.watch(activeHostProvider);
     Widget? text(String? value, {Color? color}) =>
@@ -94,15 +86,6 @@ class SettingsScreen extends ConsumerWidget {
 
     // AI.
     final permission = _permissionValue(ref);
-    // 能力.
-    final phone = android || ios ? ref.watch(phoneProvider) : null;
-    final phoneValue = phone == null || !phone.loaded || !phone.status.ready
-        ? null
-        : !phone.status.enabled
-        ? l10n.hubValueOff
-        : (ios ? phone.status.bridgeListening : phone.status.a11y.ok)
-        ? l10n.pluginsTurnedOn
-        : l10n.hubValueOneStep;
     final plugins = ref.watch(installedPluginsProvider.select((s) => s.value?.length));
     // Read only once the host's settings are at hand: the hub asks for nothing.
     final search = ref.exists(engineSettingsProvider) ? ref.watch(engineSettingsProvider).value : null;
@@ -154,24 +137,6 @@ class SettingsScreen extends ConsumerWidget {
         SettingsSection(
           title: l10n.hubGroupCapabilities,
           children: [
-            if (android || ios)
-              SettingsTile(
-                icon: AppIcons.phoneControl,
-                tint: SettingsHues.abilities,
-                spot: SettingsIndex.entry(SettingsPageId.phone),
-                value: text(phoneValue, color: phoneValue == l10n.hubValueOneStep ? colors.warning : null),
-                onTap: () => _push(context, const PhoneControlScreen()),
-              )
-            else
-              SettingsTile(
-                icon: AppIcons.phoneControl,
-                tint: SettingsHues.abilities,
-                spot: SettingsIndex.entry(SettingsPageId.systemActions),
-                value: text(
-                  ref.watch(systemActionsProvider.select((s) => s.enabled)) ? l10n.pluginsTurnedOn : l10n.hubValueOff,
-                ),
-                onTap: () => _push(context, const SystemActionsPage()),
-              ),
             SettingsTile(
               icon: AppIcons.webSearch,
               tint: SettingsHues.abilities,
@@ -237,12 +202,6 @@ class SettingsScreen extends ConsumerWidget {
             const NotificationSettingsTile(tint: SettingsHues.general),
             const VoiceSettingsTile(tint: SettingsHues.general),
             const PerformanceSettingsTile(tint: SettingsHues.general),
-            SettingsTile(
-              icon: AppIcons.systemAccess,
-              tint: SettingsHues.general,
-              spot: SettingsIndex.entry(SettingsPageId.systemAccess),
-              onTap: () => _push(context, const SystemAccessPage()),
-            ),
             SettingsTile(
               icon: AppIcons.privacy,
               tint: SettingsHues.general,

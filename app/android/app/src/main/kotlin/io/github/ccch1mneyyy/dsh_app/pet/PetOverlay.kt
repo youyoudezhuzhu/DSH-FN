@@ -49,8 +49,6 @@ import android.widget.Toast
 import io.github.ccch1mneyyy.dsh_app.MainActivity
 import io.github.ccch1mneyyy.dsh_app.R
 import io.github.ccch1mneyyy.dsh_app.nativemedia.MicArbiter
-import io.github.ccch1mneyyy.dsh_app.phone.PhoneControl
-import io.github.ccch1mneyyy.dsh_app.phone.a11y.PhoneA11yService
 import io.github.ccch1mneyyy.dsh_app.shortcuts.EntryActivity
 import io.github.ccch1mneyyy.dsh_app.voice.WavRecorder
 import java.util.Calendar
@@ -68,9 +66,8 @@ import kotlin.random.Random
  * ([Listener.call]); when it shows is [OverlayMachine]'s call, the permission branches
  * [OverlayAccess]'s, the dock [EdgeSnap]'s, what plays [PetPlayer]'s.
  *
- * Window type: TYPE_ACCESSIBILITY_OVERLAY through the phone-control accessibility service when it
- * is on (no other permission), else TYPE_APPLICATION_OVERLAY with 「显示在其他应用上层」. Whether
- * that works is decided by adding the window, not by `canDrawOverlays` (vendor switches).
+ * Window type: TYPE_APPLICATION_OVERLAY with 「显示在其他应用上层」. Whether that works is
+ * decided by adding the window, not by `canDrawOverlays` (vendor switches).
  *
  * Process-wide, main thread only. [init] comes from [PetOverlayPlugin] with the engine.
  */
@@ -100,7 +97,7 @@ internal object PetOverlay {
     private const val TARGET_GAP_DP = 28f
     private const val CHANNEL_OPEN = "dsh-pet-open"
     private const val NOTICE_ID = 3091
-    /** An answer key takes touches this long after its bubble shows (as phone control's prompt). */
+    /** An answer key takes touches this long after its bubble shows (see [PetInputPolicy]). */
     private const val ARM_MS = 600L
     /** 问一句's bar: as wide as there is room beside the pet, within these. */
     private const val ASK_MIN_DP = 240f
@@ -132,7 +129,6 @@ internal object PetOverlay {
     private var lastAdd: AddResult? = null
     private var failedAt = 0L
     private var lastCanDraw: Boolean? = null
-    private val accessibilityRetry = AccessibilityOverlayRetry()
 
     // ---- pack ----
     private var loaded: PetSprites.Loaded? = null
@@ -162,7 +158,6 @@ internal object PetOverlay {
     private var bubbleId: String? = null
     private var menuView: PetMenuView? = null
     private var closingMenu: PetMenuView? = null
-    private val capture = PetCaptureState()
     private var target: DismissTargetView? = null
     private var targetCenter: WindowPos? = null
     private var dock = Dock.DEFAULT
@@ -235,7 +230,6 @@ internal object PetOverlay {
     }
 
     private fun resetProducer() {
-        capture.invalidate()
         loadRequest++
         loadingKey = null
         pendingSettings = false
@@ -304,7 +298,6 @@ internal object PetOverlay {
     }
 
     fun setEnabled(on: Boolean): Map<String, Any?> {
-        if (!on) capture.invalidate()
         machine.enabled = on
         prefs.edit().putBoolean(K_ENABLED, on).apply()
         if (on) {
@@ -332,22 +325,20 @@ internal object PetOverlay {
     /** Status after a real check: adds (and removes) an invisible window unless the pet's own proves it. */
     fun permissionStatus(): Map<String, Any?> {
         refreshCanDraw()
-        if (!a11yConnected() && !(host == OverlayHost.APPLICATION && petView?.isAttachedToWindow == true)) probe()
+        if (!(host == OverlayHost.APPLICATION && petView?.isAttachedToWindow == true)) probe()
         evaluate()
         return status()
     }
 
     fun status(): Map<String, Any?> {
         val canDraw = canDraw()
-        val a11y = a11yConnected()
         return mapOf(
             "enabled" to machine.enabled,
             "alwaysShow" to machine.alwaysShow,
-            "permission" to OverlayAccess.permission(a11y, canDraw, lastAdd).wire,
+            "permission" to OverlayAccess.permission(canDraw, lastAdd).wire,
             "canDraw" to canDraw,
-            "accessibility" to a11y,
             "snoozed" to machine.snoozed(now()),
-            "showing" to (petView?.isAttachedToWindow == true && !capture.inFlight),
+            "showing" to (petView?.isAttachedToWindow == true),
             "sdk" to Build.VERSION.SDK_INT,
             "manufacturer" to Build.MANUFACTURER,
         ) + if (companionEndpoint == null) emptyMap() else mapOf(
@@ -359,7 +350,6 @@ internal object PetOverlay {
 
     /** 「今天不再显示」: hidden until local midnight. */
     fun snoozeToday() {
-        capture.invalidate()
         val c = Calendar.getInstance().apply {
             add(Calendar.DAY_OF_YEAR, 1)
             set(Calendar.HOUR_OF_DAY, 0)
@@ -381,20 +371,9 @@ internal object PetOverlay {
     fun evaluate() {
         if (!initialized) return
         main.removeCallbacks(evaluateRunnable)
-        if (capture.inFlight) {
-            // Keep the invisible PET ticket for openIntent's authenticated generation, but never
-            // let polling, an incoming Dart push or window-cleanup callbacks re-show captured UI.
-            stopLoop()
-            stopCompanion()
-            petView?.visibility = View.INVISIBLE
-            speaksForResults = false
-            publishStatus()
-            return
-        }
         refreshCanDraw()
         machine.canHost = overlayHost() != OverlayHost.NONE
         machine.hasPet = loaded != null && loadedKey == packKey(machine.last)
-        machine.phoneTask = PhoneControl.peek()?.foregroundLine() != null
         machine.interactive = interactive()
         machine.holding = askView != null || menuView != null || answerState.bubbleId != null || returnAsk
         val t = now()
@@ -438,12 +417,10 @@ internal object PetOverlay {
         }
         speaksForResults = ResultSilence.petSpeaks(d.visibility, petView?.isAttachedToWindow == true, systemShown, machine.last?.quiet == true)
         PetOverlayService.ensure(app, d.ownService)
-        // Polled only while out (or held back by a phone task): the accessibility service, a phone
-        // task and DshService change without telling us.
-        val poll = d.visibility == Visibility.SHOWN || (machine.phoneTask && machine.enabled && !machine.appForeground)
+        // Polled only while out: the power/keyguard state and DshService change without telling us.
+        val poll = d.visibility == Visibility.SHOWN
         val wake = listOfNotNull(
             d.wakeAt?.let { it - t }, if (poll) POLL_MS else null,
-            accessibilityRetry.remaining(PhoneA11yService.instance, t),
         ).minOrNull()
         if (wake != null) main.postDelayed(evaluateRunnable, wake.coerceAtLeast(50))
         publishStatus()
@@ -462,7 +439,7 @@ internal object PetOverlay {
     private fun companionAllowed() = companionCanRender(
         selected = companionEndpoint != null, fallback = companionRecovery.fallback,
         shown = lastVisibility == Visibility.SHOWN, interactive = machine.interactive,
-        systemShown = systemShown, capturing = capture.inFlight,
+        systemShown = systemShown, capturing = false,
         powerSave = companionEndpoint != null && app.getSystemService(PowerManager::class.java)?.isPowerSaveMode == true,
     )
 
@@ -572,13 +549,7 @@ internal object PetOverlay {
 
     // ---- permission -----------------------------------------------------------------------------
 
-    private fun a11yConnected() = PhoneA11yService.instance != null
-
-    private fun overlayHost(): OverlayHost = OverlayAccess.host(
-        a11yConnected(), lastAdd,
-        a11yFailed = accessibilityRetry.remaining(PhoneA11yService.instance, now()) != null,
-        canDraw = canDraw(),
-    )
+    private fun overlayHost(): OverlayHost = OverlayAccess.host(lastAdd)
 
     private fun canDraw(): Boolean = try { Settings.canDrawOverlays(app) } catch (_: Exception) { false }
 
@@ -818,11 +789,8 @@ internal object PetOverlay {
         return ctx
     }
 
-    private fun windowType(h: OverlayHost) =
-        if (h == OverlayHost.ACCESSIBILITY) WindowManager.LayoutParams.TYPE_ACCESSIBILITY_OVERLAY else WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY
-
     private fun baseParams(w: Int, h: Int, flags: Int) = WindowManager.LayoutParams(
-        w, h, windowType(host),
+        w, h, WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY,
         WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL or
             WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN or WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS or flags,
         PixelFormat.TRANSLUCENT,
@@ -844,13 +812,12 @@ internal object PetOverlay {
 
     private fun edge(ctx: Context) = ctx.dp(EDGE_DP)
 
-    /** The pet window, on the right host; false when it couldn't be added. */
+    /** The pet window; false when it couldn't be added. */
     private fun attachPet(): Boolean {
         val want = overlayHost()
         if (want == OverlayHost.NONE) return false
-        val service = PhoneA11yService.instance
         return try {
-            val ctx = if (want == OverlayHost.ACCESSIBILITY) service?.overlayWindowContext() ?: return false else appWindowContext()
+            val ctx = appWindowContext()
             val current = petView
             if (current != null && host == want && windows.isHost(ctx) && alive(petTicket)) return true
             removeWindows()
@@ -881,20 +848,15 @@ internal object PetOverlay {
                 removeWindows()
                 return false
             }
-            if (want == OverlayHost.APPLICATION) lastAdd = AddResult.OK
+            lastAdd = AddResult.OK
             if (companionEndpoint == null || companionRecovery.fallback) enter(view)
             drawStill()
             true
         } catch (e: Exception) {
-            Log.i(TAG, "overlay add failed (${want.name.lowercase()}): ${e.javaClass.simpleName}")
+            Log.i(TAG, "overlay add failed: ${e.javaClass.simpleName}")
             removeWindows()
-            if (want == OverlayHost.APPLICATION) {
-                lastAdd = AddResult.FAILED
-                failedAt = now()
-            } else if (service != null) {
-                accessibilityRetry.failed(service, now())
-                service.invalidateOverlayWindowContext()
-            }
+            lastAdd = AddResult.FAILED
+            failedAt = now()
             host = OverlayHost.NONE
             false
         }
@@ -1283,7 +1245,7 @@ internal object PetOverlay {
     // ---- bubble ---------------------------------------------------------------------------------
 
     private fun showBubble(b: PetBubble?) {
-        if (b == null || dragging || dimmed || slideAnim != null || menuView != null || closingMenu != null || capture.inFlight) {
+        if (b == null || dragging || dimmed || slideAnim != null || menuView != null || closingMenu != null) {
             removeBubble()
             return
         }
@@ -1473,7 +1435,7 @@ internal object PetOverlay {
     private var menuParams: WindowManager.LayoutParams? = null
 
     private fun showMenu(rawX: Float? = null, rawY: Float? = null) {
-        if (capture.inFlight || !interactive()) return
+        if (!interactive()) return
         val currentTicket = menuView?.let { windowTickets[it] }
         if (currentTicket != null && alive(currentTicket)) {
             // Reuse the live menu: removing it would reserve MENU until the
@@ -1530,7 +1492,6 @@ internal object PetOverlay {
     private fun menuLabel(item: PetMenuItem): String = AppStrings.get(app, when (item) {
         PetMenuItem.ASK -> R.string.pet_ask
         PetMenuItem.NEW_CHAT -> R.string.pet_new_chat
-        PetMenuItem.SCREENSHOT -> R.string.pet_screenshot
         PetMenuItem.STOP -> R.string.pet_stop
         PetMenuItem.SWITCH_HOST -> R.string.pet_switch_host
         PetMenuItem.SNOOZE -> R.string.pet_snooze
@@ -1540,7 +1501,6 @@ internal object PetOverlay {
     private fun wheelLabel(item: PetMenuItem): String = AppStrings.get(app, when (item) {
         PetMenuItem.ASK -> R.string.pet_ask
         PetMenuItem.NEW_CHAT -> R.string.pet_new_chat
-        PetMenuItem.SCREENSHOT -> R.string.pet_wheel_screenshot
         PetMenuItem.STOP -> R.string.pet_wheel_stop
         PetMenuItem.SWITCH_HOST -> R.string.pet_wheel_hosts
         PetMenuItem.SNOOZE -> R.string.pet_wheel_snooze
@@ -1554,7 +1514,6 @@ internal object PetOverlay {
                 dismissMenu(animated = true)
                 showAsk(fresh = item == PetMenuItem.NEW_CHAT)
             }
-            PetMenuItem.SCREENSHOT -> captureScreenshot()
             PetMenuItem.STOP -> {
                 dismissMenu(animated = true)
                 callDart("stop", mapOf("host" to target?.host, "sessionId" to target?.sessionId)) { evaluate() }
@@ -1574,8 +1533,7 @@ internal object PetOverlay {
     }
 
     /** 切换主机: the menu's rows become the hosts, the one in use muted. */
-    /** The rows this phone can offer: the accessibility screenshot exists from Android 11. */
-    private fun menuItems(push: PetPush?) = PetMenuItem.of(push, screenshots = Build.VERSION.SDK_INT >= 30)
+    private fun menuItems(push: PetPush?) = PetMenuItem.of(push)
 
     private fun showHosts(ticket: OverlayWindowOwner.Ticket) {
         val view = menuView ?: return
@@ -1621,45 +1579,6 @@ internal object PetOverlay {
         }
     }
 
-    private fun captureScreenshot() {
-        val ticket = petTicket
-        if (!alive(ticket)) return
-        val request = capture.begin() ?: return
-        // No exit animation may remain in the image. INVISIBLE keeps the PET generation alive
-        // for EntryActivity's authenticated openIntent without drawing or intercepting touches.
-        dismissMenu()
-        removeBubble()
-        removeAsk()
-        hideTarget()
-        stopLoop()
-        stopCompanion()
-        petView?.animate()?.cancel()
-        petView?.visibility = View.INVISIBLE
-        speaksForResults = false
-        publishStatus()
-        PetScreenshot.capture(app) { result ->
-            val accepted = capture.finish(request) && alive(ticket) && interactive() && machine.enabled &&
-                started == 0 && !machine.appForeground && !machine.snoozed(now()) &&
-                // A phone task that began meanwhile keeps the screen; DSH Go doesn't jump in front of it.
-                PhoneControl.peek()?.foregroundLine() == null
-            val path = result.path
-            if (accepted && path != null) {
-                openIntent(EntryActivity.screenshot(app, path), null)
-            } else {
-                if (path != null) PetScreenshot.discard(app, path)
-                if (accepted) Toast.makeText(app, AppStrings.get(app, when (result.error) {
-                    PetScreenshot.Error.UNSUPPORTED -> R.string.pet_screenshot_unsupported
-                    PetScreenshot.Error.ACCESSIBILITY_REQUIRED -> R.string.pet_screenshot_accessibility
-                    PetScreenshot.Error.SECURE -> R.string.pet_screenshot_secure
-                    PetScreenshot.Error.BUSY -> R.string.pet_screenshot_busy
-                    PetScreenshot.Error.TIMEOUT -> R.string.pet_screenshot_timeout
-                    else -> R.string.pet_screenshot_failed
-                }), Toast.LENGTH_LONG).show()
-            }
-            evaluate()
-        }
-    }
-
     private fun deliverSettings() {
         if (!pendingSettings) return
         pendingSettings = false
@@ -1698,7 +1617,7 @@ internal object PetOverlay {
      * Dart where a send would go meanwhile.
      */
     private fun showAsk(fresh: Boolean) {
-        if (capture.inFlight || !interactive()) return
+        if (!interactive()) return
         removeAsk()
         val ctx = hostContext ?: return
         val pv = petView ?: return
@@ -2052,7 +1971,6 @@ internal object PetOverlay {
     private val screen = object : BroadcastReceiver() {
         override fun onReceive(context: Context, intent: Intent) {
             if (intent.action == PowerManager.ACTION_POWER_SAVE_MODE_CHANGED && companionEndpoint == null) return
-            if (intent.action == Intent.ACTION_SCREEN_OFF || !interactive()) capture.invalidate()
             evaluate()
         }
     }
@@ -2063,7 +1981,6 @@ internal object PetOverlay {
             lastConfig = Configuration(newConfig)
             val relevant = ActivityInfo.CONFIG_ORIENTATION or ActivityInfo.CONFIG_SCREEN_SIZE or ActivityInfo.CONFIG_UI_MODE or ActivityInfo.CONFIG_DENSITY or ActivityInfo.CONFIG_FONT_SCALE
             if (diff and relevant == 0) return
-            capture.invalidate()
             removeWindows()
             if (diff and ActivityInfo.CONFIG_DENSITY != 0) {
                 loadRequest++
@@ -2088,7 +2005,6 @@ internal object PetOverlay {
         override fun onActivityStarted(activity: Activity) {
             if (activity !is MainActivity) return
             started++
-            capture.invalidate()
             machine.onForeground(true, now())
             app.getSystemService(NotificationManager::class.java)?.cancel(NOTICE_ID)
             evaluate()

@@ -27,9 +27,6 @@ enum Freq {
 /// When a page or row is there. Search still lists it otherwise, with the
 /// reason in place of its path, and opens the page it would be on.
 enum SpotCondition {
-  /// Only while 手机操控 is on.
-  phoneControlOn,
-
   /// Not in 网页模式 (the native chat takes the question).
   nativeUi,
 
@@ -46,7 +43,6 @@ enum SpotCondition {
   workshopBuilt;
 
   String label(L10n l10n) => switch (this) {
-    phoneControlOn => l10n.searchNeedsPhoneControl,
     nativeUi => l10n.searchNeedsNativeUi,
     engineField => l10n.searchNeedsEngineField,
     openChat => l10n.searchNeedsChat,
@@ -62,13 +58,6 @@ enum SettingsPageId {
   permission,
   personalization,
   agentPresets,
-  phone,
-  phoneAppRules,
-  phoneAlwaysAllow,
-  phoneAndroidShell,
-  phoneDnd,
-  phoneUnlocks,
-  systemActions,
   webSearch,
   media,
   plugins,
@@ -79,7 +68,6 @@ enum SettingsPageId {
   voice,
   voiceReading,
   performance,
-  systemAccess,
   privacy,
   sharedLinks,
   remote,
@@ -193,7 +181,7 @@ class SettingSpot {
     this.iosLacks = false,
   });
 
-  /// Stable, unique: `phone-confirm`, `page:phone`.
+  /// Stable, unique: `permission-default`, `page:permission`.
   final String id;
 
   /// The page it is on.
@@ -298,16 +286,12 @@ abstract final class SettingsIndex {
   /// Whether the `dshgo://open/<id>` link [id] leads to what only HarmonyOS has.
   static bool ohosOnlyLink(String id) => pageForLink(id)?.ohosOnly ?? false;
 
-  /// The link to follow on HarmonyOS for [id]: 系统操作 stands in for 手机操控
-  /// and its 解除限制, whose hard rules it hasn't got, and the permission page
-  /// for 确认方式, which follows it there. Anything else is itself.
+  /// The link to follow on HarmonyOS for [id]. No Android-only page has a
+  /// HarmonyOS counterpart any more (手机操控 and 系统操作 are gone with the
+  /// on-device engine), so a link is itself.
   static String ohosLink(String id) => _ohosLinks[id] ?? id;
 
-  static const _ohosLinks = {
-    'phone': 'system-actions',
-    'phone-unlocks': 'system-actions',
-    'phone-confirm': 'permission',
-  };
+  static const _ohosLinks = <String, String>{};
 
   /// Pages from the hub down to [id], both included.
   static List<SettingsPageId> chain(SettingsPageId id) {
@@ -320,8 +304,8 @@ abstract final class SettingsIndex {
     return out;
   }
 
-  /// The way there by name, as the guide writes it: 设置 › 手机操控 ›
-  /// 确认方式. A page's own trail ends with its title.
+  /// The way there by name, as the guide writes it: 设置 › AI › 权限.
+  /// A page's own trail ends with its title.
   static List<String> trail(SettingSpot spot, L10n l10n) => [
     for (final p in chain(spot.isEntry ? spot.opens! : spot.page)) page(p).title(l10n),
     if (!spot.isEntry) spot.title(l10n),
@@ -403,58 +387,6 @@ final _pages = <SettingsPageMeta>[
   ),
   // 能力
   SettingsPageMeta(
-    SettingsPageId.phone,
-    title: (l) => l.phoneControlTitle,
-    group: _abilities,
-    keywords: (l) => l.searchKwPhone,
-    freq: Freq.medium,
-    links: const ['phone'],
-    androidOnly: true,
-    iosToo: true,
-  ),
-  SettingsPageMeta(
-    SettingsPageId.systemActions,
-    title: (l) => l.systemActionsTitle,
-    group: _abilities,
-    keywords: (l) => l.searchKwSystemActions,
-    freq: Freq.medium,
-    links: const ['system-actions'],
-    ohosOnly: true,
-  ),
-  SettingsPageMeta(
-    SettingsPageId.phoneAppRules,
-    title: (l) => l.phoneAppRulesTitle,
-    parent: SettingsPageId.phone,
-    keywords: (l) => l.searchKwAppRules,
-  ),
-  SettingsPageMeta(
-    SettingsPageId.phoneAlwaysAllow,
-    title: (l) => l.phoneAlwaysAllowTitle,
-    parent: SettingsPageId.phone,
-    keywords: (l) => l.phoneAlwaysAllowSwitchHint,
-  ),
-  SettingsPageMeta(
-    SettingsPageId.phoneAndroidShell,
-    title: (l) => l.androidShellTitle,
-    parent: SettingsPageId.phone,
-    keywords: (l) => l.androidShellEntryHint,
-  ),
-  SettingsPageMeta(
-    SettingsPageId.phoneDnd,
-    title: (l) => l.phoneDndTitle,
-    parent: SettingsPageId.phone,
-    keywords: (l) => l.searchKwDnd,
-    condition: SpotCondition.phoneControlOn,
-  ),
-  SettingsPageMeta(
-    SettingsPageId.phoneUnlocks,
-    title: (l) => l.phoneUnlockTitle,
-    parent: SettingsPageId.phone,
-    keywords: (l) => l.searchKwPhoneUnlock,
-    // The overlay's 「已解除限制」 tag opens it through this link.
-    links: const ['phone-unlocks'],
-  ),
-  SettingsPageMeta(
     SettingsPageId.webSearch,
     title: (l) => l.engineSearchTitle,
     group: _abilities,
@@ -533,15 +465,6 @@ final _pages = <SettingsPageMeta>[
     group: _general,
     keywords: (l) => l.searchKwPerformance,
     links: const ['performance'],
-  ),
-  SettingsPageMeta(
-    SettingsPageId.systemAccess,
-    title: (l) => l.accessPageTitle,
-    group: _general,
-    keywords: (l) => l.searchKwSystemAccess,
-    ohosKeywords: (l) => l.harmonyKwSystemAccess,
-    freq: Freq.medium,
-    links: const ['system-permissions'],
   ),
   SettingsPageMeta(
     SettingsPageId.privacy,
@@ -694,53 +617,6 @@ abstract final class Spots {
     freq: Freq.medium,
     link: 'permission-default',
   );
-  static final permissionPhoneConfirm = SettingSpot(
-    'permission-phone-confirm',
-    page: SettingsPageId.permission,
-    title: (l) => l.hubPermissionPhoneConfirm,
-    keywords: (l) => l.searchKwPhoneConfirmEntry,
-    androidOnly: true,
-  );
-
-  // 手机操控.
-  static final phoneA11yRestore = SettingSpot(
-    'phone-a11y-restore',
-    page: SettingsPageId.phone,
-    title: (l) => l.a11yRestoreTitle,
-    keywords: (l) => l.searchKwA11yRestore,
-    condition: SpotCondition.phoneControlOn,
-  );
-  static final phoneConfirm = SettingSpot(
-    'phone-confirm',
-    page: SettingsPageId.phone,
-    title: (l) => l.phoneConfirmTitle,
-    keywords: (l) => l.searchKwPhoneConfirm,
-    freq: Freq.medium,
-    link: 'phone-confirm',
-  );
-  static final phoneAutoCollapse = SettingSpot(
-    'phone-auto-collapse',
-    page: SettingsPageId.phone,
-    title: (l) => l.phoneAutoCollapse,
-    keywords: (l) => l.searchKwPhoneAutoCollapse,
-    condition: SpotCondition.phoneControlOn,
-  );
-  static final phoneReturn = SettingSpot(
-    'phone-return',
-    page: SettingsPageId.phone,
-    title: (l) => l.phoneReturnAfterDone,
-    keywords: (l) => l.searchKwPhoneReturn,
-    condition: SpotCondition.phoneControlOn,
-    iosToo: true,
-  );
-  static final phoneBackgroundGuide = SettingSpot(
-    'phone-background-guide',
-    page: SettingsPageId.phone,
-    title: (l) => l.phoneBackgroundGuideTitle,
-    keywords: (l) => l.searchKwPhoneBackgroundGuide,
-    condition: SpotCondition.phoneControlOn,
-  );
-
   // 插件 (its 插件市场 tab; the page opens on its first tab).
   static final pluginsMarket = SettingSpot(
     'plugins-market',
@@ -1105,12 +981,6 @@ final _rows = <SettingSpot>[
   Spots.addProvider,
   Spots.permissionCurrent,
   Spots.permissionDefault,
-  Spots.permissionPhoneConfirm,
-  Spots.phoneA11yRestore,
-  Spots.phoneConfirm,
-  Spots.phoneAutoCollapse,
-  Spots.phoneReturn,
-  Spots.phoneBackgroundGuide,
   Spots.pluginsMarket,
   Spots.webSearchKey,
   Spots.darkMode,

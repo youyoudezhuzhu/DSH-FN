@@ -5,7 +5,7 @@ import 'package:dsh_app/state/notify_state.dart';
 import 'package:dsh_app/ui/settings/notification_settings.dart';
 import 'package:flutter_test/flutter_test.dart';
 
-import '../access/support.dart' show awayAndBack;
+import '../support/lifecycle.dart';
 import '../chat/support/harness.dart';
 import 'support.dart';
 

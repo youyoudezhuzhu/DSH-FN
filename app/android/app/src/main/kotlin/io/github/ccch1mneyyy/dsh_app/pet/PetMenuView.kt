@@ -576,14 +576,6 @@ private class PetWheelIcons {
                 moveTo(12f, 7.6f); lineTo(12f, 13.4f)
                 moveTo(9.1f, 10.5f); lineTo(14.9f, 10.5f)
             }
-            PetMenuItem.SCREENSHOT -> {
-                // Four viewfinder corners around a lens.
-                moveTo(4f, 9f); lineTo(4f, 7f); arcTo(RectF(4f, 4f, 10f, 10f), 180f, 90f); lineTo(9f, 4f)
-                moveTo(15f, 4f); lineTo(17f, 4f); arcTo(RectF(14f, 4f, 20f, 10f), 270f, 90f); lineTo(20f, 9f)
-                moveTo(20f, 15f); lineTo(20f, 17f); arcTo(RectF(14f, 14f, 20f, 20f), 0f, 90f); lineTo(15f, 20f)
-                moveTo(9f, 20f); lineTo(7f, 20f); arcTo(RectF(4f, 14f, 10f, 20f), 90f, 90f); lineTo(4f, 15f)
-                addCircle(12f, 12f, 2.8f, Path.Direction.CW)
-            }
             PetMenuItem.STOP -> addRoundRect(RectF(6.5f, 6.5f, 17.5f, 17.5f), 3f, 3f, Path.Direction.CW)
             PetMenuItem.SWITCH_HOST -> {
                 addRoundRect(RectF(4f, 4.5f, 20f, 10.5f), 2f, 2f, Path.Direction.CW)

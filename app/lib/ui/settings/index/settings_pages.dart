@@ -13,13 +13,6 @@ import '../../features/agent_presets_page.dart';
 import '../../features/all_features_page.dart';
 import '../../features/permission_page.dart';
 import '../../pets/pet_settings_page.dart';
-import '../../phone/always_allow_page.dart';
-import '../../phone/android_shell_page.dart';
-import '../../phone/app_rules_page.dart';
-import '../../phone/dnd_mode_page.dart';
-import '../../phone/phone_control_screen.dart';
-import '../../phone/phone_unlock_page.dart';
-import '../../phone/system_actions_page.dart';
 import '../../plugins/plugin_inventory_page.dart';
 import '../../plugins/plugins_screen.dart';
 import '../../providers/providers_page.dart';
@@ -34,7 +27,6 @@ import '../performance_page.dart';
 import '../personalization_page.dart';
 import '../privacy_page.dart';
 import '../settings_screen.dart';
-import '../system_access_page.dart';
 import '../../companion/companion_voice_page.dart';
 import '../voice_settings_page.dart';
 import 'spot_anchor.dart';
@@ -53,14 +45,6 @@ Widget settingsPage(SettingsPageId id, {String? sessionId}) => switch (id) {
   SettingsPageId.voiceReading => const CompanionVoicePage(shared: true),
   SettingsPageId.notifications => const NotificationSettingsPage(),
   SettingsPageId.sharedLinks => const HostedLinksPage(),
-  SettingsPageId.phone => const PhoneControlScreen(),
-  SettingsPageId.phoneAppRules => const PhoneAppRulesPage(),
-  SettingsPageId.phoneAlwaysAllow => const PhoneAlwaysAllowPage(),
-  SettingsPageId.phoneAndroidShell => const AndroidShellPage(),
-  SettingsPageId.phoneDnd => const PhoneDndPage(),
-  SettingsPageId.phoneUnlocks => const PhoneUnlockPage(),
-  SettingsPageId.systemActions => const SystemActionsPage(),
-  SettingsPageId.systemAccess => const SystemAccessPage(),
   SettingsPageId.models => const ProvidersPage(),
   SettingsPageId.engineParams => const EngineSettingsHubPage(),
   SettingsPageId.subagent => const SubagentSettingsPage(),

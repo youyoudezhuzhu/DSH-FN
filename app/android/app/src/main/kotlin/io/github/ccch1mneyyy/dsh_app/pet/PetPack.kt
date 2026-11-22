@@ -1,6 +1,6 @@
 package io.github.ccch1mneyyy.dsh_app.pet
 
-import io.github.ccch1mneyyy.dsh_app.phone.Json
+import io.github.ccch1mneyyy.dsh_app.util.Json
 import kotlin.math.roundToInt
 import kotlin.random.Random
 

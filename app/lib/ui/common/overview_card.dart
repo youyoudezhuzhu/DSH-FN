@@ -28,12 +28,12 @@ import 'status_chip.dart';
 /// 用法:
 /// ```dart
 /// OverviewCard(
-///   leading: OverviewGlyph(AppIcons.phoneControl, tint: 6),
-///   title: const Text('手机操控'),
-///   subtitle: const Text('可以操作手机'),
+///   leading: OverviewGlyph(AppIcons.remoteHosts, tint: 1),
+///   title: const Text('飞牛 NAS'),
+///   subtitle: const Text('远程主机'),
 ///   trailing: Switch.adaptive(value: on, onChanged: ...),   // 不传且有 onTap 时画箭头
 ///   onTap: ...,
-///   footer: OverviewFooter(tone: StatusTone.ok, text: '无障碍已开启'),
+///   footer: OverviewFooter(tone: StatusTone.ok, text: '已连接'),
 ///   onFooterTap: ...,
 /// )
 /// ```

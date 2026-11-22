@@ -127,10 +127,10 @@ jobs:
       - run: flutter pub get --enforce-lockfile
       # The upstream full suite covered the removed on-device engine, SSH, relay
       # and golden screenshots; this fork keeps the modules it still ships.
-      - name: fnOS connection + architecture + state caches
+      - name: fnOS connection + architecture + state caches + updates
         run: |
           flutter test --no-pub --reporter github \
-            test/fnos test/arch test/state/cache_state_test.dart
+            test/fnos test/arch test/state/cache_state_test.dart test/update
 
   dart:
     name: Dart packages

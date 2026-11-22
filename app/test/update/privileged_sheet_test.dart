@@ -50,7 +50,7 @@ AppUpdateState _ready({SelfUpdatePending pending = const SelfUpdatePending(), bo
   check: UpdateCheckPhase.available,
   latest: offer ? parseUpdateManifest({
     'schema': 1, 'version': '1.2.0+2', 'tag': 'v1.2.0', 'notes': '',
-    'assets': {'arm64': {'name': 'dsh-go-1.2.0-arm64.apk', 'size': 1}},
+    'assets': {'arm64': {'name': 'DSH-FN-1.2.0-arm64.apk', 'size': 1}},
   }) : null,
   task: pending.unresolved ? UpdateTaskPhase.installing : UpdateTaskPhase.ready,
   selfUpdate: pending,

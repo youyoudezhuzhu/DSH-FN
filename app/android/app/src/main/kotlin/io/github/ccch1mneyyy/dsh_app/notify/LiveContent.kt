@@ -5,9 +5,8 @@ package io.github.ccch1mneyyy.dsh_app.notify
  * status bar chip, the top of the shade, the lock screen), and that HyperOS, ColorOS and MagicOS
  * draw in their islands. Pure, so the JVM tests cover it.
  *
- * Two sources: phone control (native, [LiveActivity] builds it) and the agent's runs (reduced in
- * Dart, `lib/notify/live_activity.dart`, from the same signals as the pet). Phone control wins:
- * DSH driving the phone is what the person must be able to see and stop.
+ * Source: the agent's runs (reduced in Dart, `lib/notify/live_activity.dart`, from the same
+ * signals as the pet); [LiveActivity] posts it.
  */
 data class LiveContent(
     val kind: Kind,
@@ -27,11 +26,8 @@ data class LiveContent(
     val sessionId: String? = null,
     val host: String? = null,
     val eventId: String? = null,
-    /** Phone control: the task its 停止操作 stops (never whichever is selected at tap time). */
-    val phoneTaskId: Long? = null,
 ) {
     enum class Kind(val wire: String) {
-        PHONE("phone"),
         WAITING("waiting"),
         RUNNING("running"),
         DONE("done"),
@@ -43,7 +39,7 @@ data class LiveContent(
     }
 
     /** Still going: an indeterminate bar, refreshed while it lasts. */
-    val busy: Boolean get() = kind == Kind.PHONE || kind == Kind.RUNNING
+    val busy: Boolean get() = kind == Kind.RUNNING
 
     /** A finish, shown for a moment: posted with a short timeout in case no update follows. */
     val ending: Boolean get() = kind == Kind.DONE || kind == Kind.FAILED
@@ -55,7 +51,7 @@ data class LiveContent(
         /** The agent's live activity as Dart sends it; null for a missing or malformed one. */
         fun fromMap(m: Map<*, *>?): LiveContent? {
             m ?: return null
-            val kind = Kind.parse(m["kind"])?.takeIf { it != Kind.PHONE } ?: return null
+            val kind = Kind.parse(m["kind"]) ?: return null
             val title = (m["title"] as? String)?.takeIf { it.isNotBlank() } ?: return null
             fun str(key: String, max: Int) = (m[key] as? String)?.takeIf { it.isNotEmpty() }?.take(max)
             return LiveContent(
@@ -72,9 +68,6 @@ data class LiveContent(
                 eventId = str("eventId", 200),
             )
         }
-
-        /** Phone control first, then the agent. */
-        fun pick(phone: LiveContent?, agent: LiveContent?): LiveContent? = phone ?: agent
 
         const val TITLE_MAX = 80
         const val TEXT_MAX = 160

@@ -44,8 +44,11 @@
 ```bash
 cd app
 flutter pub get
-flutter build apk --release        # 产物：app/build/app/outputs/flutter-apk/app-release.apk
+flutter build apk --release --flavor arm64   # 真机；模拟器用 --flavor x64
+# 产物：app/build/app/outputs/flutter-apk/app-arm64-release.apk
 ```
+
+仓库已包含 Gradle wrapper（`app/android/gradlew`），clone 下来即可构建；需要 Flutter 3.47.7 + Android SDK/NDK（`ANDROID_HOME`）。
 
 仓库内 `tooling/build-apk.sh` 为上游的多 flavor 构建脚本，已去掉本地运行时打包步骤；不想要 companion 资源时可用 `--no-companion`。
 
@@ -78,3 +81,10 @@ tooling/            构建脚本
 ## 许可
 
 AGPL-3.0，见 [LICENSE](LICENSE)。上游项目与第三方组件许可见 [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md)。
+
+
+## 更新与隐私
+
+- 应用内更新只查本仓库的 GitHub Releases（`youyoudezhuzhu/DSH-FN`），不会提示上游 dsh-go 的版本，也不走上游镜像/内测通道；APK 资产名 `DSH-FN-<version>-<arm64|x64>.apk`。
+- 仓库与源码中不包含任何真实 fnconnect ID；示例统一写作 `mynas`。你在 App 里输入的 ID 只保存在本机（Secure Storage / SharedPreferences）。
+- 原版"手机操控"（让 agent 通过无障碍/Shizuku 操作手机）只在本机引擎下可用，本 fork 没有本机引擎，相关 Dart/Kotlin/引导/测试已全部删除；Shizuku 仅保留用于 APK 自更新安装。

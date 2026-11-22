@@ -17,12 +17,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:url_launcher/url_launcher.dart';
 
-import '../phone/phone_channel.dart' show PhoneTaskStatus;
 import '../pets/pet_signals.dart' show petFocusProvider, petPendingProvider;
 import '../update/update_config.dart' show updateRepo;
 import 'draft_store.dart';
 import 'notify_state.dart' show appForegroundProvider, chatOnScreenProvider;
-import 'phone_state.dart' show phoneChannelProvider;
 import 'sessions_state.dart' show currentSessionProvider;
 import 'voice_state.dart';
 
@@ -61,8 +59,6 @@ abstract final class StarPromptRules {
   /// Due and quiet this long before it comes up: the screen has settled.
   static const settle = Duration(seconds: 3);
 
-  /// Phone control just ended: the person is checking what it did.
-  static const phoneCooldown = Duration(minutes: 2);
 }
 
 /// What the phone keeps for the prompt.
@@ -304,8 +300,6 @@ class StarPromptScene {
     this.onScreen = true,
     this.running = false,
     this.waiting = false,
-    this.phoneActive = false,
-    this.phoneLastActive,
     this.voice = false,
     this.composing = false,
   });
@@ -320,83 +314,30 @@ class StarPromptScene {
   /// An approval or a question waits on the person.
   final bool waiting;
 
-  /// Phone control runs.
-  final bool phoneActive;
-
-  /// When phone control was last seen running ([starPromptClockProvider]).
-  final Duration? phoneLastActive;
-
   /// Dictation is on.
   final bool voice;
 
   /// The keyboard is up, or the composer holds something unsent.
   final bool composing;
 
-  /// Phone control runs, or ended moments ago.
-  bool phoneAt(Duration now) {
-    final last = phoneLastActive;
-    return phoneActive || (last != null && now - last < StarPromptRules.phoneCooldown);
-  }
-
   /// Nothing the dialog would interrupt.
-  bool quietAt(Duration now) => onScreen && !running && !waiting && !phoneAt(now) && !voice && !composing;
+  bool quietAt(Duration now) => onScreen && !running && !waiting && !voice && !composing;
 
   @override
   String toString() =>
-      'StarPromptScene(onScreen: $onScreen, running: $running, waiting: $waiting, phone: $phoneActive '
-      '($phoneLastActive), voice: $voice, composing: $composing)';
+      'StarPromptScene(onScreen: $onScreen, running: $running, waiting: $waiting, '
+      'voice: $voice, composing: $composing)';
 }
-
-/// Phone control as the native side reports it: a task now, and when one was
-/// last seen. Nothing without a native side.
-class PhoneTaskSeenController extends Notifier<({bool active, Duration? lastActive})> {
-  @override
-  ({bool active, Duration? lastActive}) build() {
-    final channel = ref.watch(phoneChannelProvider);
-    StreamSubscription<Object?>? sub;
-    var disposed = false;
-    ref.onDispose(() {
-      disposed = true;
-      unawaited(sub?.cancel());
-    });
-    unawaited(() async {
-      try {
-        final status = await channel.status();
-        // Listening with no native side reports an error: only once it answered.
-        if (disposed || !status.ready) return;
-        _apply(status.task);
-        sub = channel.statusChanges.listen((s) => _apply(s.task), onError: (_) {});
-      } catch (_) {
-        // No platform channels at all.
-      }
-    }());
-    return (active: false, lastActive: null);
-  }
-
-  void _apply(PhoneTaskStatus task) {
-    if (!ref.mounted) return;
-    if (task.active || state.active) {
-      state = (active: task.active, lastActive: ref.read(starPromptClockProvider)());
-    }
-  }
-}
-
-final phoneTaskSeenProvider = NotifierProvider<PhoneTaskSeenController, ({bool active, Duration? lastActive})>(
-  PhoneTaskSeenController.new,
-);
 
 /// The scene from app state. Watching it keeps its sources alive, so the
 /// host holds it while the switch is on.
 final starPromptSceneProvider = Provider<StarPromptScene>((ref) {
-  final phone = ref.watch(phoneTaskSeenProvider);
   final session = ref.watch(currentSessionProvider);
   final draft = ref.watch(draftStoreProvider.select((s) => s.drafts[session ?? 'new']));
   return StarPromptScene(
     onScreen: ref.watch(appForegroundProvider) && ref.watch(chatOnScreenProvider),
     running: ref.watch(petFocusProvider)?.running ?? false,
     waiting: ref.watch(petPendingProvider).isNotEmpty,
-    phoneActive: phone.active,
-    phoneLastActive: phone.lastActive,
     voice: ref.watch(voiceInputActiveProvider),
     composing: draft != null && (draft.text.trim().isNotEmpty || draft.attachments.isNotEmpty),
   );

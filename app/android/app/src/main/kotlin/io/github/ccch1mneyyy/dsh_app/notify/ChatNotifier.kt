@@ -38,7 +38,7 @@ import java.security.SecureRandom
  * the device is locked, the notification itself carries only that public text whatever the
  * setting, and gets its real title and text once the person unlocks (USER_PRESENT), silently.
  *
- * Kept apart from the engine (`dsh-runtime`) and phone-control (`dsh-phone-confirm`) channels.
+ * Kept apart from the engine (`dsh-runtime`) channel.
  */
 class ChatNotifier(private val app: Context) {
 

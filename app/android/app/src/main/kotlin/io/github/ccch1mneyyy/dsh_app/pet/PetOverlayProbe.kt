@@ -10,8 +10,8 @@ import android.os.Build
 import android.util.Log
 
 /**
- * Debug builds only (registered when the app is debuggable, like phone/a11y/A11yProbe): drives
- * the overlay from adb the way Dart would, and logs what it shows, for emulator checks.
+ * Debug builds only (registered when the app is debuggable): drives the overlay from adb the
+ * way Dart would, and logs what it shows, for emulator checks.
  *
  * ```
  * adb shell am broadcast -a io.github.ccch1mneyyy.dsh_app.PET_PROBE --es cmd push \

@@ -6,31 +6,25 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class OverlayAccessTest {
-    @Test fun accessibilityServiceNeedsNothingElse() {
-        assertEquals(OverlayPermission.ACCESSIBILITY, OverlayAccess.permission(true, false, null))
-        assertEquals(OverlayPermission.ACCESSIBILITY, OverlayAccess.permission(true, false, AddResult.FAILED))
-        assertEquals(OverlayHost.ACCESSIBILITY, OverlayAccess.host(true, AddResult.FAILED))
-    }
-
     @Test fun grantedWhenTheWindowWentIn() {
-        assertEquals(OverlayPermission.GRANTED, OverlayAccess.permission(false, true, AddResult.OK))
-        assertEquals(OverlayPermission.GRANTED, OverlayAccess.permission(false, true, null))
+        assertEquals(OverlayPermission.GRANTED, OverlayAccess.permission(true, AddResult.OK))
+        assertEquals(OverlayPermission.GRANTED, OverlayAccess.permission(true, null))
         // canDrawOverlays says no, but the window went in (a vendor build that lies): it works.
-        assertEquals(OverlayPermission.GRANTED, OverlayAccess.permission(false, false, AddResult.OK))
-        assertEquals(OverlayHost.APPLICATION, OverlayAccess.host(false, AddResult.OK))
+        assertEquals(OverlayPermission.GRANTED, OverlayAccess.permission(false, AddResult.OK))
+        assertEquals(OverlayHost.APPLICATION, OverlayAccess.host(AddResult.OK))
     }
 
     @Test fun vendorSwitchOffIsBlockedNotGranted() {
         // vivo: canDrawOverlays true, addView refused.
-        assertEquals(OverlayPermission.BLOCKED, OverlayAccess.permission(false, true, AddResult.FAILED))
-        assertEquals(OverlayHost.NONE, OverlayAccess.host(false, AddResult.FAILED))
+        assertEquals(OverlayPermission.BLOCKED, OverlayAccess.permission(true, AddResult.FAILED))
+        assertEquals(OverlayHost.NONE, OverlayAccess.host(AddResult.FAILED))
     }
 
     @Test fun deniedWithoutPermission() {
-        assertEquals(OverlayPermission.DENIED, OverlayAccess.permission(false, false, null))
-        assertEquals(OverlayPermission.DENIED, OverlayAccess.permission(false, false, AddResult.FAILED))
+        assertEquals(OverlayPermission.DENIED, OverlayAccess.permission(false, null))
+        assertEquals(OverlayPermission.DENIED, OverlayAccess.permission(false, AddResult.FAILED))
         // Untried: still worth one attempt.
-        assertEquals(OverlayHost.APPLICATION, OverlayAccess.host(false, null))
+        assertEquals(OverlayHost.APPLICATION, OverlayAccess.host(null))
     }
 
     @Test fun retriesAfterAFailure() {
@@ -47,37 +41,6 @@ class OverlayAccessTest {
     }
 
     @Test fun wireNamesMatchDart() {
-        assertEquals(listOf("accessibility", "granted", "blocked", "denied"), OverlayPermission.values().map { it.wire })
-    }
-
-    @Test fun accessibilityFailureOnlyFallsBackWithExplicitPermission() {
-        assertEquals(OverlayHost.NONE, OverlayAccess.host(true, AddResult.OK, a11yFailed = true, canDraw = false))
-        assertEquals(OverlayHost.APPLICATION, OverlayAccess.host(true, null, a11yFailed = true, canDraw = true))
-        assertEquals(OverlayHost.NONE, OverlayAccess.host(true, AddResult.FAILED, a11yFailed = true, canDraw = true))
-        assertEquals(OverlayHost.ACCESSIBILITY, OverlayAccess.host(true, AddResult.FAILED, a11yFailed = false, canDraw = true))
-    }
-
-    @Test fun failedAccessibilityAddCannotSpinThroughRemovalCallbacks() {
-        val retry = AccessibilityOverlayRetry()
-        val service = Any()
-        val failedAt = 1_000L
-        retry.failed(service, failedAt)
-        repeat(500) { callback ->
-            assertTrue(retry.remaining(service, failedAt + callback) != null)
-        }
-        assertEquals(1L, retry.remaining(service, failedAt + OverlayAccess.RETRY_MS - 1))
-        assertEquals(null, retry.remaining(service, failedAt + OverlayAccess.RETRY_MS))
-        retry.failed(service, failedAt + OverlayAccess.RETRY_MS)
-        assertEquals(OverlayAccess.RETRY_MS, retry.remaining(service, failedAt + OverlayAccess.RETRY_MS))
-    }
-
-    @Test fun reconnectedAccessibilityServiceDoesNotInheritOldTokenFailure() {
-        val retry = AccessibilityOverlayRetry()
-        val oldService = Any()
-        retry.failed(oldService, 1_000L)
-        assertEquals(null, retry.remaining(Any(), 1_001L))
-        retry.failed(oldService, 1_002L)
-        assertEquals(null, retry.remaining(null, 1_003L))
-        assertEquals(null, retry.remaining(oldService, 1_004L))
+        assertEquals(listOf("granted", "blocked", "denied"), OverlayPermission.values().map { it.wire })
     }
 }

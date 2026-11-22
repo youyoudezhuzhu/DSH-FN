@@ -32,20 +32,8 @@ enum AskAiTopic {
   /// 设置 › 关于 › 使用帮助.
   overview,
 
-  /// 手机操控's page and the disclosure before it is turned on.
-  phoneControl,
-
-  /// 确认方式 › 始终免确认.
-  phoneAlways,
-
-  /// 应用名单: letting DSH into a banking app, or skipping its step checks.
-  appRules,
-
   /// 自动执行命令 and the 完全权限 preset.
   fullAccess,
-
-  /// 访问手机文件.
-  phoneFiles,
 
   /// The approval card's 本对话都允许.
   allowForChat,
@@ -58,11 +46,7 @@ enum AskAiTopic {
 
   String get question => switch (this) {
     overview => appL10n.askAiQuestionOverview,
-    phoneControl => appL10n.askAiQuestionPhoneControl,
-    phoneAlways => appL10n.askAiQuestionPhoneAlways,
-    appRules => appL10n.askAiQuestionAppRules,
     fullAccess => appL10n.askAiQuestionFullAccess,
-    phoneFiles => appL10n.askAiQuestionPhoneFiles,
     allowForChat => appL10n.askAiQuestionAllowForChat,
     plugins => appL10n.askAiQuestionPlugins,
     remote => appL10n.askAiQuestionRemote,
@@ -70,8 +54,7 @@ enum AskAiTopic {
 
   /// The page of `docs/guide/<lang>/` that answers [question].
   String get guidePage => switch (this) {
-    overview || fullAccess || phoneFiles => '10-settings',
-    phoneControl || phoneAlways || appRules => '04-phone-control',
+    overview || fullAccess => '10-settings',
     allowForChat => '01-chat',
     plugins => '08-plugins',
     remote => '03-engine-hosts',

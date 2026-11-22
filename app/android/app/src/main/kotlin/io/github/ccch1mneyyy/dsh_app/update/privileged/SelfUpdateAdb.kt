@@ -2,7 +2,6 @@ package io.github.ccch1mneyyy.dsh_app.update.privileged
 
 import android.content.Context
 import android.os.Build
-import io.github.ccch1mneyyy.dsh_app.phone.background.AdbKeyStore
 import io.github.muntashirakon.adb.AdbStream
 import io.github.muntashirakon.adb.AbsAdbConnectionManager
 import io.github.muntashirakon.adb.android.AdbMdns

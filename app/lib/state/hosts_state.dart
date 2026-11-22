@@ -98,7 +98,11 @@ class FnosHostConfig {
   factory FnosHostConfig.fromJson(Map<String, Object?> json) {
     final id = json['fnconnectId'];
     if (id is! String || id.isEmpty) throw const FormatException('fnconnectId missing');
-    final target = parseFnConnectInput(id);
+    final gateway = json['gatewayPath'];
+    final target = parseFnConnectInput(
+      id,
+      gatewayPath: gateway is String && gateway.isNotEmpty ? gateway : null,
+    );
     if (target == null) throw FormatException('invalid fnconnect id: $id');
     final name = json['name'];
     return FnosHostConfig(target: target, name: name is String && name.isNotEmpty ? name : null);
@@ -111,9 +115,13 @@ class FnosHostConfig {
 
   String get fnconnectId => target.fnconnectId;
 
+  /// 显式保存过的网关路径；等于默认值时省略。
+  String? get gatewayPath => target.gatewayPath == defaultDshGatewayPath ? null : target.gatewayPath;
+
   Map<String, Object?> toJson() => {
     'fnconnectId': target.fnconnectId,
     if (name != null) 'name': name,
+    if (gatewayPath case final path?) 'gatewayPath': path,
   };
 }
 
@@ -201,6 +209,17 @@ class FnosHostController extends Notifier<FnosHostState> {
     } catch (_) {
       // 内存里已经生效；下次启动重新配置即可。
     }
+  }
+
+  /// 只改网关路径（同一台 NAS），保留已登录的会话；路径非法时返回 null。
+  Future<FnConnectTarget?> saveGatewayPath(String path) async {
+    await _loaded;
+    final config = state.config;
+    if (config == null) return null;
+    final target = config.target.withGatewayPath(path);
+    if (target == null) return null;
+    await saveTarget(target, name: config.name);
+    return target;
   }
 
   /// 记住登录得到的飞牛会话 Cookie。

@@ -25,3 +25,6 @@ app/assets/companion/whale-girl.zip
 tooling/*.log
 tooling/env.sh
 tooling/shots/
+
+# generated replay-viewer page build
+site/build/

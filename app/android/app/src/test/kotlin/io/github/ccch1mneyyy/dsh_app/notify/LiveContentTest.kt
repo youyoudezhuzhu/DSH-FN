@@ -1,10 +1,9 @@
 package io.github.ccch1mneyyy.dsh_app.notify
 
-import io.github.ccch1mneyyy.dsh_app.phone.Json
+import io.github.ccch1mneyyy.dsh_app.util.Json
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
-import org.junit.Assert.assertSame
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
@@ -39,7 +38,7 @@ class LiveContentTest {
         assertNull(LiveContent.fromMap(running - "title"))
         assertNull(LiveContent.fromMap(running + ("title" to "  ")))
         assertNull(LiveContent.fromMap(running + ("kind" to "sleeping")))
-        // Phone control is native's alone: Dart can't post a 「正在操作手机」.
+        // Phone control is gone: nothing may ask for a 「正在操作手机」 activity.
         assertNull(LiveContent.fromMap(running + ("kind" to "phone")))
     }
 
@@ -64,14 +63,6 @@ class LiveContentTest {
         assertEquals("完成", done.chipWords)
         assertTrue(done.ending)
         assertFalse(done.busy)
-    }
-
-    @Test fun phoneControlOutranksTheAgent() {
-        val agent = LiveContent.fromMap(running)!!
-        val phone = LiveContent(LiveContent.Kind.PHONE, "DSH 正在操作手机", "点击「发送」", "操作中", "DSH 正在操作手机")
-        assertSame(phone, LiveContent.pick(phone, agent))
-        assertSame(agent, LiveContent.pick(null, agent))
-        assertNull(LiveContent.pick(null, null))
     }
 
     @Test fun xiaomiFocusTemplate() {

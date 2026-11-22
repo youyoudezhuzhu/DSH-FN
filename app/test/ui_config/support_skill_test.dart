@@ -24,7 +24,7 @@ void main() {
     // Where the facts are, for both launch modes.
     expect(skill, contains('dsh-app/diagnostics.md'));
     // Symptoms the person actually reports.
-    for (final topic in ['卡顿', '发热', '连不上', '安全模式', '更新装不上', '插件', '手机操控']) {
+    for (final topic in ['卡顿', '发热', '连不上', '安全模式', '更新装不上', '插件']) {
       expect(skill, contains(topic), reason: topic);
     }
     // It must produce an issue draft and respect privacy.

@@ -9,6 +9,56 @@ import 'package:flutter_test/flutter_test.dart';
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
+  group('网关路径可自定义', () {
+    test('normalizeDshGatewayPath：空 → 默认，补前导斜杠、去尾斜杠', () {
+      expect(normalizeDshGatewayPath(null), defaultDshGatewayPath);
+      expect(normalizeDshGatewayPath(''), defaultDshGatewayPath);
+      expect(normalizeDshGatewayPath('  '), defaultDshGatewayPath);
+      expect(normalizeDshGatewayPath('dsh'), '/dsh');
+      expect(normalizeDshGatewayPath('/dsh/'), '/dsh');
+      expect(normalizeDshGatewayPath('/app/deepseek-harness'), '/app/deepseek-harness');
+    });
+
+    test('normalizeDshGatewayPath：非法字符 / 空段以外的东西拒绝', () {
+      expect(normalizeDshGatewayPath('/bad path'), isNull);
+      expect(normalizeDshGatewayPath('/dsh<'), isNull);
+      expect(normalizeDshGatewayPath('/a"b'), isNull);
+    });
+
+    test('只用 ID + 自定义路径', () {
+      final target = parseFnConnectInput('mynas', gatewayPath: '/dsh');
+      expect(target, isNotNull);
+      expect(target!.dshBaseUri, Uri.parse('https://mynas.fnos.net/dsh'));
+      expect(target.gatewayPath, '/dsh');
+      expect(target.fnconnectId, 'mynas');
+    });
+
+    test('输入自带路径时，以输入里的为准', () {
+      final target = parseFnConnectInput('https://mynas.fnos.net/custom/gw', gatewayPath: '/dsh');
+      expect(target!.gatewayPath, '/custom/gw');
+    });
+
+    test('非法自定义路径整体拒绝', () {
+      expect(parseFnConnectInput('mynas', gatewayPath: '/bad path'), isNull);
+    });
+
+    test('withGatewayPath：同 ID 换路径，非法返回 null', () {
+      final base = parseFnConnectInput('mynas')!;
+      final changed = base.withGatewayPath('/app/deepseek-harness');
+      expect(changed!.fnconnectId, 'mynas');
+      expect(changed.gatewayPath, '/app/deepseek-harness');
+      expect(base.gatewayPath, defaultDshGatewayPath);
+      expect(base.withGatewayPath('/bad path'), isNull);
+    });
+
+    test('常见路径示例包含默认路径', () {
+      expect(commonDshGatewayPaths.first, defaultDshGatewayPath);
+      for (final path in commonDshGatewayPaths) {
+        expect(normalizeDshGatewayPath(path), path);
+      }
+    });
+  });
+
   group('parseFnConnectInput', () {
     test('裸 ID → <id>.fnos.net + 默认网关路径', () {
       final target = parseFnConnectInput('mynas');

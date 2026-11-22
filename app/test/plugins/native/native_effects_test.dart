@@ -80,7 +80,7 @@ void main() {
         {'type': 'link', 'url': 'https://user:pw@example.com'},
         {'type': 'link', 'url': 'javascript:alert(1)'},
         {'type': 'command', 'name': 'rm -rf'},
-        {'type': 'open', 'page': 'phone-control-everything'},
+        {'type': 'open', 'page': 'not-a-real-page'},
         {'type': 'insert'},
         {'type': 'patch', 'data': 'not an object'},
         {'a': 1, 'b': 2},

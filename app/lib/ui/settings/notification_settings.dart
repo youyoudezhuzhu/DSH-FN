@@ -8,7 +8,6 @@ import '../../runtime/runtime_state.dart';
 import '../../state/android_features.dart';
 import '../../state/live_activity_state.dart';
 import '../../state/notify_state.dart';
-import '../phone/phone_widgets.dart';
 import '../shell/page_frame.dart';
 import '../theme/app_icons.dart';
 import '../theme/theme.dart';
@@ -141,7 +140,7 @@ class _NotificationSettingsPageState extends ConsumerState<NotificationSettingsP
       text = appL10n.pluginsBackgroundNoDoneAlerts;
       channel = 'done';
     }
-    return PhoneNote(
+    return SettingsNote(
       tone: NoteTone.warn,
       icon: AppIcons.notificationsOff,
       title: title,
@@ -162,7 +161,7 @@ class _NotificationSettingsPageState extends ConsumerState<NotificationSettingsP
   }
 
   /// The live activity is on here but the system holds it back: the way to its switch.
-  Widget _liveNote() => PhoneNote(
+  Widget _liveNote() => SettingsNote(
     tone: NoteTone.warn,
     icon: AppIcons.notificationsOff,
     title: _ohos ? appL10n.harmonyLiveBlockedTitle : appL10n.liveBlockedTitle,

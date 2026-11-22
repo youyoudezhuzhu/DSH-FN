@@ -1,8 +1,8 @@
 ---
 # dsh-go:managed — the dsh-go app keeps this skill up to date; delete this line to keep your own edits.
 name: dsh-go-support
-description: dsh-go 手机 App 的排障与反馈：读 App 写好的本机诊断（路径见 AGENTS.md 的「本机诊断」一节，通常是 `$DSH_HOME/dsh-app/diagnostics.md`）、按症状清单定位、生成脱敏的环境摘要和 issue 草稿。用户说卡顿、发热、耗电、连不上、闪退、更新装不上、插件不生效、手机操控失败，或要反馈 bug 时，先加载它。Diagnose and report dsh-go problems from the on-device diagnostics snapshot.
-whenToUse: The person reports a problem with DSH Go (lag, heat, battery, connection, crash, update, plugin, phone control) or asks to file an issue. Not for changing the app's UI (dsh-go-ui) or writing a plugin (dsh-go-plugin).
+description: dsh-go 手机 App 的排障与反馈：读 App 写好的本机诊断（路径见 AGENTS.md 的「本机诊断」一节，通常是 `$DSH_HOME/dsh-app/diagnostics.md`）、按症状清单定位、生成脱敏的环境摘要和 issue 草稿。用户说卡顿、发热、耗电、连不上、闪退、更新装不上、插件不生效，或要反馈 bug 时，先加载它。Diagnose and report dsh-go problems from the on-device diagnostics snapshot.
+whenToUse: The person reports a problem with DSH Go (lag, heat, battery, connection, crash, update, plugin) or asks to file an issue. Not for changing the app's UI (dsh-go-ui) or writing a plugin (dsh-go-plugin).
 ---
 
 # dsh-go 排障与反馈
@@ -23,7 +23,6 @@ whenToUse: The person reports a problem with DSH Go (lag, heat, battery, connect
 App 捕获的完整错误信息仍是本进程内有限的内存记录；新版本另将错误类别和少量自有源码位置、内容无关的语音阶段有界持久化。Android 11+ 可按系统可用性提供本应用历史进程退出原因，不读取退出描述或原始 trace。这些记录不是完整崩溃堆栈；缺失、不可用或空结果不能当作正常证据。诊断包也不是系统 logcat：普通 App 对其他应用和系统日志的读取受 Android 权限与版本限制，不能假定有全系统日志或绕过权限。确需 logcat 时，先说明范围与隐私风险，由用户自行选择合法可用的采集方式；不同 Android 版本、设备和权限下内容可能不同。
 
 - 先核对可用报告的生成时间、App 版本和设备是否与本次反馈一致；另一台设备或旧时间的报告不能当成本次现场。优先读取本次手动报告，再用自动快照补充环境。只有可用报告都缺失或过旧时才请用户到 **设置 → 诊断 → 让 AI 看诊断** 发布，再读；不要因另一个文件缺失反复要求刷新。旧版只有主快照也是正常情况。
-- 新版本提供 `mcp__phone__diagnostics` 时，用户要求排障即可先自行调用：默认 `refresh:true`，按 `section` 取 `summary`、`evidence`、`appErrors`、`voice`、`engine` 或 `failure`，不用先读屏或开启手机操控。核对 `collectedAt`、`refreshed`、`code`，失败不能把旧快照说成本次现场；`refresh:false` 只读缓存。每段有界且可能标记 `truncated`。工具不采系统输入法证据、不导出任意路径、不替用户对外发送。工具缺失或不可用时再读已有快照，不反复调用逼用户开启权限。
 - 信息不足时可请用户通过诊断功能导出 ZIP：它由同类采集结果生成，包含摘要、设置，按可用性包含崩溃分类、引擎/失败日志尾部和 App 错误；日志仍有上限，并非日志全文或完整 crash 细节。用户检查后自行保管或上传，不替他发。
 
 用户点 **让 AI 看诊断** 后，只原子写入同目录固定的 `diagnostics-manual.md` 手动报告，供 AI 读取本次采集的系统输入法证据；自动刷新只写 `diagnostics.md`，两者不互相覆盖。分别核对生成时间、设备与版本，不把旧手动报告当新现场；旧版只有主快照时读已有文件，不推断故障不存在。路径与主快照相同的目录，direct/safe 模式同样按 AGENTS 指示定位。
@@ -47,10 +46,10 @@ App 捕获的完整错误信息仍是本进程内有限的内存记录；新版�
 - 仍然卡：请用户记下"哪一页、什么操作、持续多久"，并导出诊断包。
 
 ### 发热 / 耗电
-- 本机引擎常驻 + 手机操控（无障碍/悬浮条）+ 桌宠 + 高刷是主要来源；诊断看 `环境` 是否 running、`设置` 里自动起本机/可视化回复/手机存储。
-- 不用时让用户**停止本机引擎**（设置 → 本机引擎 → 停止），或改用远程主机；手机操控不用时关掉。
+- 本机引擎常驻 + 桌宠 + 高刷是主要来源；诊断看 `环境` 是否 running、`设置` 里自动起本机/可视化回复/手机存储。
+- 不用时让用户**停止本机引擎**（设置 → 本机引擎 → 停止），或改用远程主机。
 - 看诊断 `性能` 里温度档位；长时间流式输出本身就会热，属正常。
-- 不要建议用户改系统电池优化/无障碍权限来"提速"——那类改动先解释清楚再让用户自己点。
+- 不要建议用户改系统电池优化来"提速"——那类改动先解释清楚再让用户自己点。
 
 ### 连不上远程 / 一直"重新连接中"
 - 先确认：主机端和手机端登录同一个账号；主机端插件在跑（`/remote status` 在主机侧看）。
@@ -86,14 +85,6 @@ App 捕获的完整错误信息仍是本进程内有限的内存记录；新版�
 - 基础信息不足且当前版本支持时，可以提出更高权限的只读诊断：先说明用途、采集范围及隐私风险，询问用户意愿，再由用户亲自在原生确认界面批准本次采集。它只复用已配置且正在运行的高权限通道，读取近期由本 App 进程输出的系统输入法请求并返回有限的结构化事件（显示/隐藏请求或输入连接关闭、时间、来源及可识别的原因），不返回原始系统日志行；既有通道授权不等于本次诊断许可。不要主动触发系统权限申请；通道不可用、用户拒绝、取消或采集失败时如实说明，不当作故障证据，也不绕过授权。
 - 用户完成一次采集后，点 **让 AI 看诊断**，再读取快照里的系统输入法证据；需要更多有限事件时再导出 ZIP。采集结果只留在 App 内存，清除或重启后不再保留；已导出的文件不被撤回。不要循环采集、跑压力测试或擅自装测试 APK。
 - 事件不含输入正文，原始日志仅在采集时瞬时读取并丢弃；其他日志、截图和诊断包仍可能含隐私。Android 12 或部分 ROM 可能不产生匹配日志；`noEvents`、未知原因或缺少 `fromUser` 不是正常证据，也不能把未知当成 `false`。证据不足时明确说明，不单凭这些事件归责输入法、App 或系统。
-
-### 手机操控失败
-- 检查诊断中的手机操控与无障碍状态；未就绪或未采集不等于已关闭。信息不足时再问用户，部分 ROM 可能自行关闭无障碍服务。
-- 敏感页（密码/支付）读不到是系统策略，不是 bug；让用户 handoff。
-- 悬浮条异常：让用户关掉再开一次手机操控。
-- 多个任务同时跑：后台任务有上限，超出时后提交的会排队或被拒；让用户等前一个结束，或减少并行。
-- 想确认链路通不通：`设置 → 手机操控` 里有自检；自检失败按它指出的那一项处理，不要拿别的项替它下结论。
-- 实时后台预览看着不动/发黑：先确认不打扰模式和后台上限，再看诊断 `手机操控（本机）` 一节，不要直接说是无障碍坏了。
 
 ## 3. 生成反馈（issue 草稿）
 

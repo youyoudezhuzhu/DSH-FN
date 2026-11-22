@@ -19,13 +19,12 @@ import io.github.ccch1mneyyy.dsh_app.MainActivity
 import io.github.ccch1mneyyy.dsh_app.R
 import io.github.ccch1mneyyy.dsh_app.i18n.AppStrings
 import io.github.ccch1mneyyy.dsh_app.pet.PetOverlay
-import io.github.ccch1mneyyy.dsh_app.phone.PhoneControl
 import io.github.ccch1mneyyy.dsh_app.theme.ThemeAccent
 
 /**
- * The live activity: one ongoing notification (channel [CHANNEL], id [ID]) while DSH works, waits
- * on the person or drives the phone, asking Android 16 to promote it to a Live Update: the status
- * bar chip, the top of the shade, the lock screen. HyperOS 3.1+, ColorOS 16 and MagicOS 10 draw
+ * The live activity: one ongoing notification (channel [CHANNEL], id [ID]) while the agent works
+ * or waits on the person, asking Android 16 to promote it to a Live Update: the status bar chip,
+ * the top of the shade, the lock screen. HyperOS 3.1+, ColorOS 16 and MagicOS 10 draw
  * promoted notifications in their islands; HyperOS's focus template rides along where SystemUI
  * takes it ([XiaomiFocus]). vivo's 原子岛 and Samsung's Now Bar take allowlisted apps only (on
  * OriginOS 6 the extras are stripped from anyone else's notification), so nothing here aims at them.
@@ -40,8 +39,7 @@ import io.github.ccch1mneyyy.dsh_app.theme.ThemeAccent
  * per [MIN_GAP_MS] (NotificationManager drops bursts); the post is refreshed while it lasts and
  * times out otherwise, so a process that died doesn't leave 「工作中」 behind.
  *
- * Content: [LiveContent]. The agent's part comes from Dart ([update]); phone control's is read
- * here ([PhoneControl.liveTask]) whenever it changes ([refresh]).
+ * Content: [LiveContent], sent by Dart ([update]) and refreshed by [refresh].
  */
 object LiveActivity {
     const val CHANNEL = "dsh-live"
@@ -69,8 +67,6 @@ object LiveActivity {
     /** Unknown at start: a post of an earlier process may still be up. */
     private var posted = true
     private var postedAt = 0L
-    private var phoneTask = 0L
-    private var phoneSince = 0L
     private var portraitKey: String? = null
     private var portrait: Bitmap? = null
 
@@ -81,8 +77,8 @@ object LiveActivity {
     }
 
     /**
-     * Dart's part: whether the live activity is on ([enabled], kept for phone control while no
-     * engine runs), the pet pack the pictures come from, and what the agent is doing (null: nothing).
+     * Dart's part: whether the live activity is on ([enabled]), the pet pack the pictures come
+     * from, and what the agent is doing (null: nothing).
      */
     fun update(context: Context, enabled: Boolean, packId: String?, agent: LiveContent?) {
         val ctx = attach(context)
@@ -153,11 +149,7 @@ object LiveActivity {
 
     private fun apply() {
         val ctx = app ?: return
-        val content = if (enabled(ctx) && (canPromote(ctx) || XiaomiFocus.allowed(ctx))) {
-            LiveContent.pick(phoneContent(ctx), agent)
-        } else {
-            null
-        }
+        val content = if (enabled(ctx) && (canPromote(ctx) || XiaomiFocus.allowed(ctx))) agent else null
         if (content == null) {
             handler.removeCallbacks(repost)
             if (posted) nm(ctx).cancel(ID)
@@ -172,26 +164,6 @@ object LiveActivity {
         postedAt = SystemClock.elapsedRealtime()
         handler.removeCallbacks(repost)
         if (!content.ending) handler.postDelayed(repost, REFRESH_MS)
-    }
-
-    private fun phoneContent(ctx: Context): LiveContent? {
-        val task = PhoneControl.peek()?.liveTask() ?: return null
-        if (task.id != phoneTask) {
-            phoneTask = task.id
-            phoneSince = System.currentTimeMillis()
-        }
-        val title = AppStrings.get(ctx, R.string.phone_running)
-        return LiveContent(
-            kind = LiveContent.Kind.PHONE,
-            title = title,
-            text = task.line ?: task.app.orEmpty(),
-            chip = AppStrings.get(ctx, if (task.paused) R.string.live_chip_paused else R.string.live_chip_phone),
-            publicText = title,
-            sinceMs = phoneSince,
-            packId = packId,
-            mood = "working",
-            phoneTaskId = task.id,
-        )
     }
 
     private fun post(ctx: Context, c: LiveContent) {

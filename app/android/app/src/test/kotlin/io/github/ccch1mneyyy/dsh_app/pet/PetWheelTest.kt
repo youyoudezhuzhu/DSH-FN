@@ -255,21 +255,4 @@ class PetWheelTest {
         assertFalse(snapped.snap())
         assertEquals(1f, snapped.x, 0f)
     }
-
-    @Test fun producerRotationOrLockInvalidationDoesNotReleaseCaptureVisibilityEarly() {
-        val state = PetCaptureState()
-        val request = state.begin()!!
-        assertTrue(state.inFlight)
-        assertNull(state.begin())
-        state.invalidate()
-        assertTrue(state.inFlight) // evaluate must still suppress re-show until the late callback
-        assertFalse(state.finish(request))
-        assertFalse(state.inFlight)
-        assertFalse(state.finish(request))
-        val next = state.begin()!!
-        assertFalse(state.finish(request))
-        assertTrue(state.inFlight)
-        assertTrue(state.finish(next))
-        assertFalse(state.inFlight)
-    }
 }

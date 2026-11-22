@@ -131,8 +131,8 @@ android {
         release {
             // Use the release key when configured; local builds without key.properties fall back to debug.
             signingConfig = signingConfigs.getByName(if (keyProps.isEmpty) "debug" else "release")
-            // Ours on top of Flutter's: phone control's privileged process and
-            // its TLS libraries are reached by class name (see the file).
+            // Ours on top of Flutter's: the self-update UserService and its TLS
+            // libraries are reached by class name (see the file).
             proguardFiles("proguard-rules.pro")
         }
     }
@@ -164,7 +164,8 @@ dependencies {
     // Android stubs do not implement JSONObject in local JVM upgrade tests.
     testImplementation("org.json:json:20240303")
 
-    // 不打扰模式 (phone/background): a shell-uid privileged display via Shizuku or self-ADB.
+    // In-app self-update (update/privileged/): installing the downloaded APK through a one-use
+    // Shizuku UserService, or over the user's own wireless-debugging ADB pairing.
     implementation("dev.rikka.shizuku:api:13.1.5")       // MIT
     implementation("dev.rikka.shizuku:provider:13.1.5")  // MIT
     implementation("com.github.MuntashirAkon:libadb-android:3.1.1") // used under its Apache-2.0 option; pulls in spake2-android (LGPL-3.0)

@@ -223,6 +223,68 @@ class _RemoteScreenState extends ConsumerState<RemoteScreen> {
     }
   }
 
+  /// 修改 DSH 网关路径（同一台 NAS，保留飞牛登录）。
+  Future<void> _editGatewayPath() async {
+    final config = ref.read(fnosHostProvider).config;
+    if (config == null) return;
+    final controller = TextEditingController(text: config.target.gatewayPath);
+    final path = await showDialog<String>(
+      context: context,
+      builder: (context) {
+        final theme = Theme.of(context);
+        return AlertDialog(
+          title: const Text('DSH 网关路径'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              TextField(
+                controller: controller,
+                autocorrect: false,
+                enableSuggestions: false,
+                keyboardType: TextInputType.url,
+                autofocus: true,
+                decoration: const InputDecoration(
+                  labelText: '路径',
+                  hintText: defaultDshGatewayPath,
+                  helperText: '应用中心安装一般用默认；自建反代/Docker 时填反代路径，如 /dsh',
+                  helperMaxLines: 3,
+                ),
+              ),
+              const SizedBox(height: 10),
+              Wrap(
+                spacing: 8,
+                runSpacing: 4,
+                children: [
+                  for (final preset in commonDshGatewayPaths)
+                    ActionChip(
+                      label: Text(preset, style: theme.textTheme.bodySmall),
+                      onPressed: () => controller.text = preset,
+                    ),
+                ],
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(onPressed: () => Navigator.of(context).pop(), child: const Text('取消')),
+            FilledButton(
+              onPressed: () => Navigator.of(context).pop(controller.text.trim()),
+              child: const Text('保存'),
+            ),
+          ],
+        );
+      },
+    );
+    if (path == null || !mounted) return;
+    final target = await ref.read(fnosHostProvider.notifier).saveGatewayPath(path);
+    if (!mounted) return;
+    if (target == null) {
+      showBriefNotice(context, '网关路径不合法：需要以 / 开头的路径');
+      return;
+    }
+    showBriefNotice(context, '已改用 ${target.gatewayPath}，正在重新连接');
+  }
+
   /// 等 DSH 连上（最多 30s）。登录页已经验证过网关，通常不到 1s。
   Future<bool> _waitConnected() async {
     final deadline = DateTime.now().add(const Duration(seconds: 30));
@@ -289,7 +351,8 @@ class _RemoteScreenState extends ConsumerState<RemoteScreen> {
               const SizedBox(height: 6),
               Text(
                 '只填 ID，如 mynas。App 会访问 https://<ID>.fnos.net 上的 DSH'
-                '（网关路径 $defaultDshGatewayPath），并自动完成登录后的连接。',
+                '（默认网关路径 $defaultDshGatewayPath；自建反代/Docker 等安装方式'
+                '可在「管理 → DSH 网关路径」里改），并自动完成登录后的连接。',
                 style: theme.textTheme.bodySmall?.copyWith(color: colors.textTertiary, height: 1.5),
               ),
               const SizedBox(height: 16),
@@ -337,7 +400,7 @@ class _RemoteScreenState extends ConsumerState<RemoteScreen> {
         ),
         children: const [
           InfoRow(label: '接入方式', value: '飞牛 fnconnect'),
-          InfoRow(label: 'DSH 网关路径', value: defaultDshGatewayPath, mono: true),
+          InfoRow(label: 'DSH 网关路径', value: '$defaultDshGatewayPath（可在「管理」里改）', mono: true),
         ],
       ),
     ];
@@ -495,6 +558,14 @@ class _RemoteScreenState extends ConsumerState<RemoteScreen> {
             title: '重新登录飞牛',
             subtitle: '飞牛登录过期或换了飞牛账号时使用',
             onTap: _busy ? null : () => unawaited(_relogin()),
+          ),
+          SettingsTile(
+            icon: AppIcons.configure,
+            tinted: false,
+            title: 'DSH 网关路径',
+            subtitle: '当前 ${ref.read(fnosHostProvider).config?.target.gatewayPath ?? defaultDshGatewayPath}；'
+                '自建反代/Docker 时修改',
+            onTap: _busy ? null : () => unawaited(_editGatewayPath()),
           ),
           SettingsTile(
             icon: AppIcons.configure,

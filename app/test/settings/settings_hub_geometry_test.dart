@@ -15,7 +15,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-import '../phone/support.dart' show FixedActiveHost;
+import '../support/fixed_active_host.dart';
 import '../shell/golden_harness.dart';
 
 const _tol = 0.6;
