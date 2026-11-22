@@ -17,9 +17,12 @@ sealed class DshWebAccess {
 /// 飞牛主机：DSH 网页版就在飞牛统一网关的 `/app/deepseek-harness/fngateway`
 /// 上；WebView 与登录共用同一份 Cookie，打开即已登录。
 final class FnOsDshWeb extends DshWebAccess {
-  const FnOsDshWeb(this.url, this.hostName);
+  const FnOsDshWeb(this.url, this.hostName, this.cookieHeader);
   final Uri url;
   final String hostName;
+
+  /// 打开前注入 WebView 的飞牛会话 Cookie（网页版是另一个 WebView）。
+  final String cookieHeader;
 }
 
 /// No web page right now; [reason] says why.
@@ -36,7 +39,7 @@ final dshWebAccessProvider = Provider.autoDispose<DshWebAccess>((ref) {
   if (config == null || name == null || !host.signedIn) {
     return NoDshWeb(appL10n.webConnectHostFirst(name ?? appL10n.commonRemoteHost));
   }
-  return FnOsDshWeb(config.target.dshBaseUri, name);
+  return FnOsDshWeb(config.target.dshBaseUri, name, host.session!.cookieHeader);
 });
 
 /// A page that decides how it is left for DSH Web: [openDshWeb] from inside
@@ -78,6 +81,8 @@ void openDshWeb(BuildContext context, WidgetRef ref, {DshWebTarget target = cons
     MaterialPageRoute<void>(
       builder: (_) => WebViewPage(
         url: web.url,
+        cookieOrigin: web.url,
+        cookieHeader: web.cookieHeader,
         title: context.l10n.webTitle,
         subtitle: web.hostName,
         // Android suspends the page in the background and its socket drops.

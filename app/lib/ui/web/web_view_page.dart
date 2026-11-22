@@ -9,6 +9,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:webview_flutter/webview_flutter.dart';
 
+import '../../fnos/fnos_auth.dart';
 import '../../l10n/l10n.dart';
 import '../common/empty_view.dart';
 import '../common/expand_reveal.dart';
@@ -48,10 +49,17 @@ class WebViewPage extends StatefulWidget {
     this.root = false,
     this.link,
     this.onSession,
+    this.cookieOrigin,
+    this.cookieHeader,
   });
 
   final Uri url;
   final String title;
+
+  /// 打开前注入到 [cookieOrigin] 的会话 Cookie（飞牛网关：网页版是另一个
+  /// WebView，不经过登录页，必须先把保存的飞牛会话写进它的 CookieManager）。
+  final Uri? cookieOrigin;
+  final String? cookieHeader;
   final String? subtitle;
 
   /// Show an enabled "在浏览器打开" button. When false the button is still shown,
@@ -740,6 +748,10 @@ class _WebViewPageState extends State<WebViewPage> {
     // After the navigation delegate: the guard wraps the client it set.
     await _guard.attach(controller, dark: _dark, textZoom: _textZoom);
     if (!mounted || controller != _controller) return;
+    if (widget.cookieOrigin case final origin? when widget.cookieHeader != null) {
+      await writeFnosCookies(origin.toString(), widget.cookieHeader!).catchError((_) {});
+      if (!mounted || controller != _controller) return;
+    }
     await controller.loadRequest(widget.url).catchError((_) {});
   }
 

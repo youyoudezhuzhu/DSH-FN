@@ -10,6 +10,7 @@ import 'dart:async';
 import 'package:dsh_client/dsh_client.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../fnos/fnos_auth.dart';
 import '../fnos/fnos_client.dart';
 import '../remote/link_status.dart';
 import '../remote/network_watch.dart';
@@ -64,11 +65,40 @@ class FnosConnectionController extends AsyncNotifier<HostConnection?> {
     // Nothing to connect to yet: onboarding asks for the ID, then for a login.
     if (config == null || session == null) return null;
 
-    final client = await connectFnosDsh(
-      target: config.target,
-      cookieHeader: session.cookieHeader,
-      backgroundLists: true,
-    );
+    // 网关的飞牛会话会过期（关掉 App 一段时间再打开最常见）：先探测一次，
+    // 明确是登录失效就清掉会话让界面回到登录页，而不是一直转圈。
+    final probe = await probeFnosDsh(target: config.target, cookieHeader: session.cookieHeader);
+    if (!r.mounted) return null;
+    if (!probe.authenticated) {
+      if (_looksLikeExpiredSession(probe.detail)) {
+        await r.read(fnosHostProvider.notifier).clearSession();
+        return null;
+      }
+      throw StateError(probe.detail ?? '连不上飞牛网关');
+    }
+
+    final DshClient client;
+    try {
+      client = await connectFnosDsh(
+        target: config.target,
+        cookieHeader: session.cookieHeader,
+        backgroundLists: true,
+      ).timeout(const Duration(seconds: 20));
+    } on TimeoutException {
+      throw StateError('连接飞牛网关超时：请确认 NAS 在线且 fnconnect 可用');
+    } on DshHttpException catch (error) {
+      if (error.statusCode == 401 || error.statusCode == 403) {
+        await r.read(fnosHostProvider.notifier).clearSession();
+        return null;
+      }
+      rethrow;
+    } on DshProtocolException catch (error) {
+      if (error.message.toLowerCase().contains('invalid token')) {
+        await r.read(fnosHostProvider.notifier).clearSession();
+        return null;
+      }
+      rethrow;
+    }
     if (!r.mounted) {
       await client.close();
       return null;
@@ -82,6 +112,16 @@ class FnosConnectionController extends AsyncNotifier<HostConnection?> {
       hostId: config.fnconnectId,
       workingDirectory: null,
     );
+  }
+
+  /// 探测结果里哪些原因等于「飞牛登录失效」，而不是网络/DSH 没起来。
+  static bool _looksLikeExpiredSession(String? detail) {
+    if (detail == null) return false;
+    final text = detail.toLowerCase();
+    return text.contains('invalid token') ||
+        text.contains('失效') ||
+        text.contains('401') ||
+        text.contains('403');
   }
 
   /// Connects again now (失败卡片上的「重试」).

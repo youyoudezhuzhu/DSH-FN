@@ -140,6 +140,8 @@ class _FnosLoginPageState extends State<FnosLoginPage> {
       final cookie = await readFnosCookies(widget.target.origin.toString());
       if (cookie == null || _finished || _timedOut || !mounted) return;
       _setStatus('已拿到飞牛登录凭据，正在验证 DSH 连接…');
+      // Cookie 由登录页的 WebView 写入 CookieManager；落盘后冷启动与网页版都还在。
+      await writeFnosCookies(widget.target.origin.toString(), cookie);
       final probe = await probeFnosDsh(target: widget.target, cookieHeader: cookie);
       if (_finished || _timedOut || !mounted) return;
       if (probe.authenticated) {

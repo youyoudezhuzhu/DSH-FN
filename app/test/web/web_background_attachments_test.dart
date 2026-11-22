@@ -62,7 +62,7 @@ void main() {
               overrides: [
                 ...harness.overrides,
                 operatingSystemProvider.overrideWithValue(os),
-                dshWebAccessProvider.overrideWithValue(FnOsDshWeb(url, 'fixture SSH')),
+                dshWebAccessProvider.overrideWithValue(FnOsDshWeb(url, 'fixture SSH', 'fnos=test')),
               ],
             ),
           );

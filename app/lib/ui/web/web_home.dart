@@ -154,10 +154,12 @@ class _WebHomeState extends ConsumerState<WebHome> {
     final access = ref.watch(dshWebAccessProvider);
     final phoneLayout = ref.watch(settingsProvider.select((s) => s.webPhoneLayout));
     final Widget page = switch (access) {
-      FnOsDshWeb(:final url, :final hostName) => WebViewPage(
+      FnOsDshWeb(:final url, :final hostName, :final cookieHeader) => WebViewPage(
         // A layout switch needs a new page; a reconnect keeps the same URL.
         key: ValueKey((url, phoneLayout)),
         url: url,
+        cookieOrigin: url,
+        cookieHeader: cookieHeader,
         title: context.l10n.webTitle,
         subtitle: hostName,
         // Android suspends the page in the background and its socket drops.

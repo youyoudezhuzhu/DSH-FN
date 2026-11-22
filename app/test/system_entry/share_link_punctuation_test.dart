@@ -52,7 +52,7 @@ void main() {
               overrides: [
                 ...harness.overrides,
                 operatingSystemProvider.overrideWithValue('ios'),
-                dshWebAccessProvider.overrideWithValue(FnOsDshWeb(Uri.parse('http://127.0.0.1:41234/'), 'fixture')),
+                dshWebAccessProvider.overrideWithValue(FnOsDshWeb(Uri.parse('http://127.0.0.1:41234/'), 'fixture', 'fnos=test')),
               ],
             ),
           );

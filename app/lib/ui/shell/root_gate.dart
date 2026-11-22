@@ -34,6 +34,34 @@ class RootGate extends ConsumerStatefulWidget {
 class _RootGateState extends ConsumerState<RootGate> {
   bool _launchReady = false;
 
+  /// 首次连接迟迟没有结果（网关掉线、WebSocket 卡住）时，别让启动画面一直转。
+  static const _slowConnect = Duration(seconds: 20);
+  bool _slow = false;
+  Timer? _slowTimer;
+
+  void _watchSlowStartup(bool connecting) {
+    if (!connecting) {
+      _slowTimer?.cancel();
+      _slowTimer = null;
+      if (_slow) _slow = false;
+      return;
+    }
+    if (_slow || _slowTimer != null) return;
+    _slowTimer = Timer(_slowConnect, () {
+      if (!mounted) return;
+      setState(() {
+        _slow = true;
+        _slowTimer = null;
+      });
+    });
+  }
+
+  @override
+  void dispose() {
+    _slowTimer?.cancel();
+    super.dispose();
+  }
+
   void _markLaunchReady() {
     if (_launchReady) return;
     _launchReady = true;
@@ -58,6 +86,13 @@ class _RootGateState extends ConsumerState<RootGate> {
     } else if (!host.configured || !host.signedIn) {
       key = 'setup';
       child = const FnosSetupPage();
+    } else if (connection.isLoading && _slow) {
+      key = 'offline';
+      child = _ConnectFailed(
+        error: TimeoutException('连接飞牛网关超时'),
+        onRetry: () => ref.read(fnosConnectionProvider.notifier).retry(),
+        onRelogin: () => ref.read(fnosHostProvider.notifier).clearSession(),
+      );
     } else if (connection.hasError && !connection.isLoading) {
       key = 'offline';
       child = _ConnectFailed(
@@ -74,6 +109,7 @@ class _RootGateState extends ConsumerState<RootGate> {
       child = widget.home ?? const ModeHome();
     }
 
+    _watchSlowStartup(key == 'splash' && host.configured && host.signedIn);
     if (key != 'splash') _markLaunchReady();
     return AnimatedSwitcher(
       duration: AppMotion.of(context, AppMotion.page),
@@ -118,7 +154,7 @@ class _ConnectFailed extends StatelessWidget {
                   ),
                   const SizedBox(height: 8),
                   Text(
-                    '${error.runtimeType}',
+                    _detailOf(error),
                     textAlign: TextAlign.center,
                     style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.outline),
                   ),
@@ -135,6 +171,13 @@ class _ConnectFailed extends StatelessWidget {
     );
   }
 }
+
+/// 失败卡片上的一行细节：异常类型不是给人看的，能拿到 message 就用它。
+String _detailOf(Object error) => switch (error) {
+  TimeoutException() => '连接超时（20 秒）',
+  StateError(:final message) => message,
+  _ => error.toString(),
+};
 
 /// Shown for the few hundred ms before the saved host is read. Same colour as
 /// the Android launch window; the mark fades in only if loading is slow.

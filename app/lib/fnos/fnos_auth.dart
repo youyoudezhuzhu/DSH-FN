@@ -33,6 +33,33 @@ Future<String?> readFnosCookies(String url) async {
   }
 }
 
+/// 把 [cookieHeader]（`k=v; k2=v2`）写进 WebView 在 [url] 下的 Cookie。
+///
+/// 网页版（DSH Web）是另一个 WebView，不经过登录页：打开前把保存的飞牛会话
+/// 注入它的 CookieManager，网关才不会回 `invalid token`。
+Future<void> writeFnosCookies(String url, String cookieHeader) async {
+  final pairs = cookieHeader
+      .split(';')
+      .map((p) => p.trim())
+      .where((p) => p.isNotEmpty && p.contains('='));
+  for (final pair in pairs) {
+    try {
+      await fnosCookieChannel.invokeMethod<void>('setCookie', {'url': url, 'cookie': '$pair; path=/'});
+    } on MissingPluginException {
+      return;
+    } on PlatformException {
+      // 单条写不进不影响其它 Cookie。
+    }
+  }
+  try {
+    await fnosCookieChannel.invokeMethod<void>('flushCookies');
+  } on MissingPluginException {
+    // 非 Android 宿主。
+  } on PlatformException {
+    // 落盘失败：内存里的 Cookie 本次运行仍可用。
+  }
+}
+
 /// 清掉 WebView 的全部 Cookie（退出账号 / 换一个 fnconnect ID 时用）。
 Future<void> clearFnosCookies() async {
   try {

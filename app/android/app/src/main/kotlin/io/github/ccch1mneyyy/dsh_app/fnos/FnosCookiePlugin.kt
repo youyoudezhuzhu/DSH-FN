@@ -13,6 +13,8 @@ import io.flutter.plugin.common.MethodChannel
  *
  * - `getCookie {url}` → WebView 在 [url] 下保存的完整 Cookie 头（`k=v; k2=v2`）；
  *   没有或读不到时返回 null。
+ * - `setCookie {url, cookie}` → 在 [url] 下写一条 Cookie（网页版打开前注入会话）。
+ * - `flushCookies` → 把 CookieManager 落盘（登录成功后，冷启动仍可用）。
  * - `clearCookies` → 清掉 WebView 的全部 Cookie（退出账号、换 fnconnect ID）。
  *
  * 登录页的 WebView 把 fnOS 会话写进 CookieManager；Dart 只读这份 Cookie，
@@ -49,6 +51,24 @@ class FnosCookiePlugin : FlutterPlugin, MethodChannel.MethodCallHandler {
                         }.getOrNull()
                     )
                 }
+            }
+            "setCookie" -> {
+                val url = call.argument<String>("url")
+                val cookie = call.argument<String>("cookie")
+                if (url.isNullOrEmpty() || cookie.isNullOrEmpty()) {
+                    result.success(null)
+                    return
+                }
+                onMain {
+                    runCatching {
+                        CookieManager.getInstance().apply { setAcceptCookie(true) }.setCookie(url, cookie)
+                        result.success(null)
+                    }.onFailure { result.success(null) }
+                }
+            }
+            "flushCookies" -> onMain {
+                runCatching { CookieManager.getInstance().flush() }
+                result.success(null)
             }
             "clearCookies" -> onMain {
                 runCatching {
