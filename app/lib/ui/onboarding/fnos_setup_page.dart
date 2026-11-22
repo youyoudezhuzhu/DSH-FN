@@ -11,6 +11,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../fnos/fnconnect.dart';
+import '../../fnos/fnos_auth.dart';
 import '../../fnos/fnos_webview.dart';
 import '../../state/hosts_state.dart';
 import '../shell/brand_mark.dart';
@@ -76,15 +77,31 @@ class _FnosSetupPageState extends ConsumerState<FnosSetupPage> {
     });
     try {
       final hosts = ref.read(fnosHostProvider.notifier);
-      await hosts.saveTarget(target);
+      await hosts.saveTarget(target, name: target.fnconnectId);
+      final credentials = _autoLogin
+          ? FnosCredentials(username: _username.text.trim(), password: _password.text)
+          : null;
+      await hosts.saveCredentials(credentials);
       if (!mounted) return;
-      final cookie = await FnosLoginPage.show(context, target: target);
-      if (!mounted) return;
+
+      String? cookie;
+      if (credentials != null && !credentials.isEmpty) {
+        // 已经填了账号密码：直接自动登录，不需要再进登录页手动输一遍。
+        final (autoCookie, error) = await runFnosAutoLogin(context, target: target, credentials: credentials);
+        if (!mounted) return;
+        cookie = autoCookie;
+        if (cookie == null) {
+          setState(() => _error = '${error ?? '自动登录失败'}；已改为手动登录');
+          cookie = await FnosLoginPage.show(context, target: target);
+          if (!mounted) return;
+        }
+      } else {
+        cookie = await FnosLoginPage.show(context, target: target);
+        if (!mounted) return;
+      }
+
       if (cookie == null || cookie.isEmpty) {
-        setState(() {
-          _busy = false;
-          _error = '登录没有完成：请在弹出的飞牛登录页里登录并等待连接成功。';
-        });
+        setState(() => _error = '登录没有完成：请重新登录并等待连接成功。');
         return;
       }
       await hosts.saveSession(cookie);

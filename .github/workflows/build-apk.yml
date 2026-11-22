@@ -76,6 +76,24 @@ jobs:
           }
           EOF
 
+      # 固定签名的 release 密钥来自仓库 Secrets（不入库）：每次构建都签同一个 key，
+      # 升级才能覆盖安装，指纹也不会变。
+      - name: Restore the release signing key
+        env:
+          KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        working-directory: app/android
+        run: |
+          if [ -z "$KEYSTORE_BASE64" ]; then
+            echo "::error::没有配置 ANDROID_KEYSTORE_BASE64：release 会退回 debug 签名"
+            exit 1
+          fi
+          printf '%s' "$KEYSTORE_BASE64" | base64 -d > dsh-fn-release.jks
+          printf 'storeFile=%s/app/android/dsh-fn-release.jks\nstorePassword=%s\nkeyAlias=%s\nkeyPassword=%s\n' \
+            "$GITHUB_WORKSPACE" "$KEYSTORE_PASSWORD" "$KEY_ALIAS" "$KEY_PASSWORD" > key.properties
+
       - name: Project metadata, Gradle wrapper, dependencies
         working-directory: app
         run: |

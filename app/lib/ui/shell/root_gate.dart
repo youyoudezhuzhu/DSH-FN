@@ -61,9 +61,23 @@ class _RootGateState extends ConsumerState<RootGate> {
   }
 
   String? _setupError;
+  bool _autoRunning = false;
 
-  Future<void> _onAutoLogin(FnosHostState host, String? cookie, String? error) async {
+  Future<void> _runAutoLoginOnce(FnosHostState host) async {
+    final config = host.config;
+    final credentials = host.credentials;
+    if (config == null || credentials == null) {
+      _autoLoginTried = true;
+      if (mounted) setState(() {});
+      return;
+    }
+    final (cookie, error) = await runFnosAutoLogin(
+      context,
+      target: config.target,
+      credentials: credentials,
+    );
     _autoLoginTried = true;
+    _autoRunning = false;
     if (cookie != null && cookie.isNotEmpty) {
       await ref.read(fnosHostProvider.notifier).saveSession(cookie);
       return;
@@ -100,12 +114,11 @@ class _RootGateState extends ConsumerState<RootGate> {
     if (!host.loaded) {
       child = const _Splash();
     } else if (host.configured && !host.signedIn && host.autoLogin && !_autoLoginTried) {
-      key = 'autologin';
-      child = FnosAutoLoginPage(
-        target: host.config!.target,
-        credentials: host.credentials!,
-        onFinished: (cookie, error) => unawaited(_onAutoLogin(host, cookie, error)),
-      );
+      if (!_autoRunning) {
+        _autoRunning = true;
+        WidgetsBinding.instance.addPostFrameCallback((_) => unawaited(_runAutoLoginOnce(host)));
+      }
+      child = const _Splash();
     } else if (!host.configured || !host.signedIn) {
       key = 'setup';
       child = FnosSetupPage(initialError: _setupError);

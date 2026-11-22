@@ -268,6 +268,30 @@ class _FnosLoginPageState extends State<FnosLoginPage> {
   }
 }
 
+/// 用保存的账号密码自动登录一次：打开自动登录页，返回 (Cookie, 失败原因)。
+///
+/// 首次配置填了账号密码时也走这里，所以**不需要再进 WebView 手动登录一次**；
+/// 失败（密码错误、需要验证码、页面结构变化）返回原因，由调用方回退。
+Future<(String?, String?)> runFnosAutoLogin(
+  BuildContext context, {
+  required FnConnectTarget target,
+  required FnosCredentials credentials,
+}) {
+  return Navigator.of(context)
+      .push<(String?, String?)>(
+        MaterialPageRoute(
+          builder: (pageContext) => FnosAutoLoginPage(
+            target: target,
+            credentials: credentials,
+            onFinished: (cookie, error) {
+              if (pageContext.mounted) Navigator.of(pageContext).pop((cookie, error));
+            },
+          ),
+        ),
+      )
+      .then((value) => value ?? (null, '已取消自动登录'));
+}
+
 /// 自动登录：用保存在本机安全存储里的飞牛账号密码，在一个隐藏 WebView 里
 /// 自动填表登录，刷新会话 Cookie。
 ///
@@ -439,8 +463,13 @@ class _FnosAutoLoginPageState extends State<FnosAutoLoginPage> {
                     Text(_status),
                     const SizedBox(height: 8),
                     Text(
-                      '已保存飞牛账号，正在自动重新登录；不需要的话可在设置里关闭',
+                      '正在用保存的飞牛账号自动登录',
                       style: theme.textTheme.bodySmall,
+                    ),
+                    const SizedBox(height: 16),
+                    TextButton(
+                      onPressed: () => _finish(null, '已取消自动登录'),
+                      child: const Text('改为手动登录'),
                     ),
                   ],
                 ),
