@@ -83,7 +83,7 @@ void main() {
     test('a host without files, or a page that cannot be read: the question and a note', () async {
       for (final request in [
         await askAiRequest(AskAiTopic.remote, route: GuideRoute.none, read: _pages),
-        await askAiRequest(AskAiTopic.plugins, route: GuideRoute.attachment, read: _pages),
+        await askAiRequest(AskAiTopic.overview, route: GuideRoute.attachment, read: _pages),
       ]) {
         expect(request.text, startsWith('关于 DSH-FN App：'));
         expect(request.attachments, isEmpty);
@@ -159,14 +159,14 @@ void main() {
       expect(find.descendant(of: find.byTooltip('问 AI'), matching: find.byIcon(AppIcons.askAi)), findsOneWidget);
     });
 
-    testWidgets('closes the page and queues the question with the guide page for an SSH host', (tester) async {
+    testWidgets('closes the page and queues the question', (tester) async {
       await pumpPage(tester);
       await tester.tap(find.byTooltip('问 AI'));
       await tester.pumpAndSettle();
       expect(find.byType(AppPage), findsNothing, reason: 'back at the chat');
       final request = _container(tester).read(composeInboxProvider).single;
       expect(request.text, startsWith('关于 DSH-FN App：怎么连接自己的电脑或服务器？'));
-      expect(request.attachments.single.name, 'dsh-go-guide-engine-hosts.md');
+      expect(request.attachments, isEmpty);
     });
 
     testWidgets('on DSH Remote, which takes no files: the question and the note', (tester) async {
@@ -219,7 +219,10 @@ void main() {
       await tester.pumpAndSettle();
       await tester.tap(row);
       await tester.pumpAndSettle();
-      expect(_container(tester).read(composeInboxProvider).single.text, '/dsh-go-guide DSH-FN 能做什么？我该从哪里开始？');
+      expect(
+        _container(tester).read(composeInboxProvider).single.text,
+        '关于 DSH-FN App：DSH-FN 能做什么？我该从哪里开始？',
+      );
     });
 
     testWidgets('使用帮助 is not there in 网页模式', (tester) async {
